@@ -1,26 +1,28 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  elmt.h : Definitions for finite element library.
  *                                                                     
- *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software on any computer system,
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -39,7 +41,6 @@ ARRAY     *elmt_shell_4n();     /* X.G. shell element, 4 node   */
 ARRAY     *elmt_shell_8n();     /* X.G. shell element, 8 node   */
 ARRAY     *elmt_fiber_2d();     /* 2-D fiber element with one global shear spring */
 ARRAY     *elmt_fiber_3d();     /* 3-D fiber element with two global shear springs */
-ARRAY     *elmt_fbeam_2d();     /* 2-D flexible beam */
 
 /* element properties handling */
 
@@ -53,7 +54,6 @@ void       print_property_shell_4n_q();
 void       print_property_shell_8n();
 void       print_property_fiber_2d();
 void       print_property_fiber_3d();
-void       print_property_fbeam_2d();
 
 /* Generic Template for Item in Finite Element Library */
 
@@ -77,7 +77,6 @@ static struct {
            "FIBER_3D",        elmt_fiber_3d,    print_property_fiber_3d,   6, 2, 3,
            "FIBER_2DS",       elmt_fiber_2d,    print_property_fiber_2d,   3, 2, 2,
            "FIBER_3DS",       elmt_fiber_3d,    print_property_fiber_3d,   6, 2, 3,
-	   "FBEAM_2D",        elmt_fbeam_2d,    print_property_fbeam_2d,   3, 2, 2,
 	};
 
 #define NO_ELEMENTS_IN_LIBRARY (sizeof(elmt_library)/sizeof(elmt_library[0]))
@@ -99,4 +98,3 @@ static struct {
 #define STRESS_UPDATE     11
 
 #endif /* end case ELMT_H */
-

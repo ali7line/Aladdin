@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  elmt_fiber3d.c : Linear/Nonlinear 3D Fiber Element
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,11 +16,13 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Wane-Jang Lin                                            May 1996
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -512,8 +514,22 @@ FIBER_ATTR  *fiber;
                 default:
                    break;
              }
-          }
-          break;  /* end of case STRESS, LOAD_MATRIX */
+            }
+            break;  /* end of case STRESS, LOAD_MATRIX */
+
+       case STRESS_MATRIX:
+
+            /* save element nodal forces in working array */
+
+            printf("--------------------------------------------------- \n");
+            printf("In elmt_fiber3d.c : case STRESS_MATRIX              \n");
+            printf("--------------------------------------------------- \n");
+            printf("*** This block of code has not yet been implemented \n");
+            printf("*** See elmt_fiber2d.c for details in 2-d case      \n");
+            printf("*** Terminating Program Execution                   \n");
+            exit(1);
+
+            break;
 
        case MASS_MATRIX:
           if( p->work_section[6].value != 0.0 )    /* mbar = weight/gravity */

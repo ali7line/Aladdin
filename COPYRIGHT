@@ -1,8 +1,8 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 : 
+ *  ALADDIN Version 2.1.
  *                                                                     
- *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -20,7 +20,7 @@
  *     products without a license. 
  *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 

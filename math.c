@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  math.c : Math Functions
  *                                                                     
- *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,11 +16,13 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, and Wane-Jang Lin                           May 1997
+ *  Written by: Mark Austin and Wane-Jang Lin                            May 1997
  *  ============================================================================= 
  */
 

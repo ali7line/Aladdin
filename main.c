@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  main.c : Check the input type
  *                                                                     
- *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,9 +16,11 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
  *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
@@ -62,26 +64,26 @@ void   set_default_values();
 void   set_print_output();
 char **p;
 
-   /* [0] : codes for running on FreeBSD platform */
+   /* [a] : codes for running on FreeBSD platform */
 
 #ifdef __FreeBSD__
    fpsetmask (0);
 #endif
 
-   /* [a] : Read flags and options from command input */
+   /* [b] : Read flags and options from command input */
 
    progname = argv[0];
    fin      = stdin;
    finp     = stdin;
 
-   /* [b] : Provide help when command flags are missing */
+   /* [c] : Provide help when command flags are missing */
 
    if (argc == 1) { 
        ProgramUsage();
        exit(1);
    }
 
-   /* [c] : Read and process command flags */
+   /* [d] : Read and process command flags */
 
    while(--argc > 0 && ((*++argv) != NULL)) 
       if((*argv)[0] == '-') 
@@ -141,16 +143,16 @@ char **p;
                      break;
 	   }
 
-   /* [d] : Set Output Flags */
+   /* [e] : Set Output Flags */
 
       set_default_values();
       set_print_output();
 
-   /* [e] : Load grammar, materials and AISC sections into symbol table */
+   /* [f] : Load grammar, materials and AISC sections into symbol table */
 
       Init_Problem();
 
-   /* [f] : Run Problem */
+   /* [g] : Run Problem */
       
       if(b == 's') ScanInput();
       Run(a, b);

@@ -1,6 +1,8 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 : elmt_shell_4n_q.c.
+ *  ALADDIN Version 2.1.
+ *                                                                     
+ *  elmt_shell_4n_q.c.
  *                                                                     
  *  This is a 4 node quadralateral shell element, incorportating membrane with
  *  normal drilling d.o.f. modified to remove effects of constant strains and
@@ -62,7 +64,7 @@
  *    p->type              = d[16];   ???
  *    p->coord[ndm][nen]   = xl(ndm,*);
  *    p->node_connect[nen] = ix(nen);
-
+ * 
  *    p->LC_ptr->ialph     = ialph;     Rotation constant
  *    p->LC_ptr->pen       = pen;       Penalty constant
  *    p->LC_ptr->load[0-5] = d[6-11];   Loading parameters

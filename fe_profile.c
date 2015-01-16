@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  fe_profile.c : Major fuctions for FE Profiler
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,9 +16,11 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
  *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
@@ -123,7 +125,8 @@ int nmin;
                 frame->jdiag[n-1] = frame->jdiag[n-1] + frame->jdiag[n-2] +1;
 
             nad = frame->jdiag[frame->no_eq-1];
-  /**********    frame->nad = nad;           *******/
+
+            /**********    frame->nad = nad;           *******/
             break;
         default:
             break;
@@ -858,26 +861,32 @@ int                           iNO_INTEG_pts;
             }
 
 	    /* Assign work fiber attribution in frame to p array */
-	    if( !(strcmp(p->elmt_type, "FIBER_2D"))  || !(strcmp(p->elmt_type, "FIBER_3D"))
-	     || !(strcmp(p->elmt_type, "FIBER_2DS")) || !(strcmp(p->elmt_type, "FIBER_3DS")) ) {
-               p->integ_ptr->integ_pts = frp->no_integ_pt;
-	       /* Use the data stored in frame DIRECTLY , use carefully, do not free them */
-	       p->fiber_ptr = eap->work_fiber;
 
-	       p->Q_saved  = el->rp->Q_saved;
-	       p->q_saved  = el->rp->q_saved;
-	       p->sr_saved = el->rp->sr_saved;
-	       p->er_saved = el->rp->er_saved;
-	       p->s0_saved = el->rp->s0_saved;
-	       p->e0_saved = el->rp->e0_saved;
-	       p->sx_saved = el->rp->sx_saved;
-	       p->ex_saved = el->rp->ex_saved;
+	    if( !(strcmp(p->elmt_type, "FIBER_2D"))  ||
+                !(strcmp(p->elmt_type, "FIBER_3D"))  ||
+                !(strcmp(p->elmt_type, "FIBER_2DS")) ||
+                !(strcmp(p->elmt_type, "FIBER_3DS")) ) {
 
-	       p->yielding_saved  = el->esp->yielding_saved;
-	       p->pre_range_saved = el->esp->pre_range_saved;
-	       p->pre_load_saved  = el->esp->pre_load_saved;
+                p->integ_ptr->integ_pts = frp->no_integ_pt;
+
+                /* Use the data stored in frame DIRECTLY , use carefully, do not free them */
+
+                p->fiber_ptr = eap->work_fiber;
+
+	        p->Q_saved  = el->rp->Q_saved;
+	        p->q_saved  = el->rp->q_saved;
+	        p->sr_saved = el->rp->sr_saved;
+	        p->er_saved = el->rp->er_saved;
+	        p->s0_saved = el->rp->s0_saved;
+	        p->e0_saved = el->rp->e0_saved;
+	        p->sx_saved = el->rp->sx_saved;
+	        p->ex_saved = el->rp->ex_saved;
+
+	        p->yielding_saved  = el->esp->yielding_saved;
+	        p->pre_range_saved = el->esp->pre_range_saved;
+	        p->pre_load_saved  = el->esp->pre_load_saved;
 	    }
-	break;
+            break;
 
        case STIFF:
        case MASS_MATRIX:
@@ -1057,12 +1066,9 @@ int                           iNO_INTEG_pts;
                 p->effect_pl_strain[j-1]   = el->rp->effect_pl_strain[j-1];
                 p->eff_pl_strain_incr[j-1] = 0.0;
                 for(i = 1; i <= 9; i++){
-                    p->stress->uMatrix.daa[i-1][j-1] 
-                    = el->rp->stress->uMatrix.daa[i-1][j-1];
-                    p->strain_pl->uMatrix.daa[i-1][j-1]
-                    = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
-                    p->strain_pl_incr->uMatrix.daa[i-1][j-1]
-                    = 0.0;
+                    p->stress->uMatrix.daa[i-1][j-1] = el->rp->stress->uMatrix.daa[i-1][j-1];
+                    p->strain_pl->uMatrix.daa[i-1][j-1]      = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
+                    p->strain_pl_incr->uMatrix.daa[i-1][j-1] = 0.0;
                 }
             }
 
@@ -1077,8 +1083,7 @@ int                           iNO_INTEG_pts;
                node_no = el->node_connect[j-1];
                if(node_no != 0){
                   for(i=1;i<=p->no_dimen;i++) {
-                      p->coord[i-1][j-1].value 
-                      = frp->node[node_no -1].coord[i-1].value;
+                      p->coord[i-1][j-1].value = frp->node[node_no -1].coord[i-1].value;
                       if(UNITS_SWITCH == ON )
                          UnitsCopy( p->coord[i-1][j-1].dimen,
                          frp->node[node_no -1].coord[i-1].dimen );
@@ -1087,12 +1092,8 @@ int                           iNO_INTEG_pts;
             }
 
             if(task == STRESS_LOAD) {
-/*
-               Get_elmt_forces_and_strains(p,frp,elmt_no);
-*/
-               ;
-            }
-            else{                     /* PRESSLD */
+               /* Get_elmt_forces_and_strains(p,frp,elmt_no); */ ;
+            } else{  /* PRESSLD */
                i = 0;
                for(j=1;j <= frp->no_element_loads; j++) {
                    if(elmt_no == frp->eforces[i].elmt_no ){ 
@@ -1300,7 +1301,7 @@ int       iNO_INTEG_pts;
    pp->LC_ptr->H        = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
    pp->LC_ptr->back_stress = MatrixAllocIndirectDouble(6, iNO_INTEG_pts);
 
-   pp->stress           = MatrixAllocIndirect("stress_rate", DOUBLE_ARRAY, 9, iNO_INTEG_pts);
+   pp->stress           = MatrixAllocIndirect("stress", DOUBLE_ARRAY, 9, iNO_INTEG_pts);
    pp->strain_pl        = MatrixAllocIndirect("strain", DOUBLE_ARRAY, 9, iNO_INTEG_pts);
    pp->strain_pl_incr   = MatrixAllocIndirect("strain", DOUBLE_ARRAY, 9, iNO_INTEG_pts);
 
@@ -1356,15 +1357,16 @@ int       iNO_INTEG_pts;
           }
       }
 
-      pp->eangle.dimen         = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-      pp->ealpha.dimen         = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-      pp->length.dimen         = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+      pp->eangle.dimen = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+      pp->ealpha.dimen = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+      pp->length.dimen = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
    }
    return(pp);
 
 #ifdef DEBUG
        printf("*** Leave fe_profile.c : Alloc_p_Array()\n\n");
 #endif
+
 }
 
 

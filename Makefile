@@ -35,7 +35,7 @@ FINITE =	fe_allocate.o 	fe_mesh.o       fe_matrix.o \
 ELEMENTS =  	elmt_set_attr.o	elmt_library.o	elmt_lamina_sys.o \
         	elmt_frame2d.o	elmt_frame3d.o	elmt_psps.o 	elmt_plate.o \
 		elmt_shell_4n.o	elmt_shell_8n.o elmt_shell_4n_q.o \
-        	elmt_fiber2d.o	elmt_fiber3d.o  elmt_fbeam2d.o
+        	elmt_fiber2d.o	elmt_fiber3d.o
 
 # Make ALADDIN main program
 

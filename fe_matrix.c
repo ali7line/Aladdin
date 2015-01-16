@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  fe_matrix.c : Functions to solve (non)linear FE solution procedures
  *                                                                     
- *  Copyright (C) 1995-1998 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,11 +16,13 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -42,9 +44,10 @@
 #include "fe_functions.h"
 #include "elmt.h"
 
-
 extern ARRAY     *array;
 extern EFRAME    *frame;
+
+/* #define DEBUG */
 
 /* 
  *  ------------------------------ 
@@ -413,28 +416,30 @@ int itemp;
 
    for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) { 
 
-   ep = &frame->element[elmt_no-1];
-   eap = &(frame->eattr[ep->elmt_attr_no-1]);
-   if( !(strcmp(eap->elmt_type, "SHELL_4N")) || !(strcmp(eap->elmt_type, "SHELL_8N")) ) {
-      if(displ_incr == (MATRIX *) NULL)
-         ep->esp->state = 0; /* Calculate internal load as elastic behaviour */
-      else
-         ep->esp->state = 1; /* Need check for ELASTIC PLASTIC STATE */
-   }
+       ep  = &frame->element[elmt_no-1];
+       eap = &(frame->eattr[ep->elmt_attr_no-1]);
+       if( !(strcmp(eap->elmt_type, "SHELL_4N")) ||
+           !(strcmp(eap->elmt_type, "SHELL_8N")) ) {
+             if(displ_incr == (MATRIX *) NULL)
+                ep->esp->state = 0; /* Calculate internal load as elastic behaviour */
+             else
+                ep->esp->state = 1; /* Need check for ELASTIC PLASTIC STATE */
+       }
 
-   array = Assign_p_Array(frame, elmt_no, array, STRESS);
-   array = elmlib(array, PROPTY);
+       array = Assign_p_Array(frame, elmt_no, array, STRESS);
+       array = elmlib(array, PROPTY);
 
-   /*  Transfer fixed displacements */
+       /*  Transfer fixed displacements */
 
-   for(i=1; i <= array->nodes_per_elmt; i++) {
+       for(i = 1; i <= array->nodes_per_elmt; i++) {
 
-       k = 1;
-       node_no = ep->node_connect[i-1];
-       for(j = 1; j <= frame->no_dof; j++) {
+           k = 1;
+           node_no = ep->node_connect[i-1];
+           for(j = 1; j <= frame->no_dof; j++) {
 
            switch((int) array->nodes_per_elmt) {
-               case 2: case 3:
+               case 2:
+               case 3:
                     jj = frame->node[node_no - 1].bound_id[j-1];  
                     if(jj > 0) {
 
@@ -521,10 +526,8 @@ int itemp;
        }
        }
 
-       array = elmlib(array, LOAD_MATRIX);
+       array = elmlib(array, LOAD_MATRIX );
        Ld    = Destination_Array(frame, elmt_no);
-
-
 
        if( UNITS_SWITCH == ON ) 
            ZeroUnits(&(load->spColUnits[0]));
@@ -564,168 +567,6 @@ int itemp;
     return(load);
 }
 
-/* 
- *  ==============================================================
- *  Update the displacements in frame and coordinates of nodes
- * 
- *  Usage : UpdateDispl(displ)         
- *  ==============================================================
- */ 
- 
-#ifdef  __STDC__
-void UpdateDispl( MATRIX *m1)
-#else
-void UpdateDispl( disple)
-#endif
-{
-#ifndef __STDC__
-MATRIX            *m1;
-#endif
-
-ELEMENT              *ep;
-ELEMENT_ATTR        *eap;
-
-int     node_no, elmt_no, dof_per_node, nodes_per_elmt;
-int elmt_attr_no;
-int     i, j, k, jj, ii; 
-int         UNITS_SWITCH;
-
-#ifdef DEBUGZJ
-       printf("*** Enter UpdateDispl()\n");
-#endif
-
-   UNITS_SWITCH = CheckUnits();
-
-   /* Transfer displacements to nodes in frame */
-   if( UNITS_SWITCH == ON ) {
-
-      for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
-	for(j  = 1; j <= frame->no_dof; j++){
-          jj = frame->node[node_no - 1].bound_id[j-1];
-          if(jj > 0) {
-	    if(m1->spRowUnits[jj-1].units_name != NULL ) {
-	      UnitsTypeConvert(&(m1->spRowUnits[jj-1]), CheckUnitsType());
-	    }
-	    RadUnitsSimplify( &(m1->spRowUnits[jj-1]) );
-	    frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
-	    UnitsCopy( frame->node[node_no-1].disp[j-1].dimen, &(m1->spRowUnits[jj-1]) );
-          } else {
-	    switch(CheckUnitsType()) {
-	    case SI:
-	      if( (frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
-		  !strcmp( frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_F"))
-		
-		frame->node[node_no -1].disp[j-1].value
-		  = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
-				     frame->node[node_no -1].disp[j-1].value, US);
-	      break;
-	    case US:
-	      if((frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
-		 !strcmp(frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_C"))
-		
-		frame->node[node_no -1].disp[j-1].value
-		  = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
-				     frame->node[node_no -1].disp[j-1].value, SI);
-	      break;
-	    }
-	    
-             RadUnitsSimplify( frame->node[node_no-1].disp[j-1].dimen );
-	     
-	  }
-	}
-      }
-   }
-
-
-   if( UNITS_SWITCH == OFF ) {
-     
-     for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
-       for(j  = 1; j <= frame->no_dof; j++){
-	 jj = frame->node[node_no - 1].bound_id[j-1];
-	 if(jj > 0) {
-	   frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
-	 }
-       }
-     }
-   }
-
-   /* Change the coordiates of nodes */
-   for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
-       for(j  = 1; j <= frame->no_dof-1; j++){
-	 jj = frame->node[node_no - 1].bound_id[j-1];
-	 if(jj > 0) {
-	   frame->node[node_no-1].coord[j-1].value = frame->node[node_no-1].coord[j-1].value +
-	                                             frame->node[node_no-1].disp[j-1].value;
-	 }
-       }
-   }
-
- /* Transfer Displacements to element in frame */
-if(m1 != (MATRIX *) NULL)
-  for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
-    ep           = &frame->element[elmt_no-1];
-    elmt_attr_no = ep->elmt_attr_no;  
-    eap          = &frame->eattr[elmt_attr_no-1];
-    for(i=1; i <= frame->no_nodes_per_elmt; i++) {
-      k = 1; 
-      node_no = ep->node_connect[i-1];
-      for(j = 1; j <= frame->no_dof; j++) {
-	switch((int) frame->no_nodes_per_elmt) {
-	case 2:
-	case 3:
-	  ii = eap->map_ldof_to_gdof[j-1];
-	  jj = frame->node[node_no - 1].bound_id[ii-1];
-	  if(jj > 0) {
-	    ep->rp->displ->uMatrix.daa[j-1][i-1] = m1->uMatrix.daa[jj-1][0];
-	    if( UNITS_SWITCH == ON ) {
-	      UnitsCopy(&( ep->rp->displ->spRowUnits[j-1]), &(m1->spRowUnits[jj-1]));
-	      ZeroUnits(&( ep->rp->displ->spColUnits[i-1]));
-	    }
-	  } else {
-	    ep->rp->displ->uMatrix.daa[j-1][i-1]
-	      = frame->node[node_no -1].disp[ii-1].value;
-	    if( UNITS_SWITCH == ON ) {
-	      UnitsCopy(&( ep->rp->displ->spRowUnits[j-1]),
-			frame->node[node_no -1].disp[ii-1].dimen);
-	      ZeroUnits(&( ep->rp->displ->spColUnits[i-1]));
-	    }
-	  }
-#ifdef DEBUGZJ
-	  printf(" upd elmt=%d, ep[%d][%d]=%g\n", elmt_no, j-1, i-1,ep->rp->displ->uMatrix.daa[j-1][i-1] );
-#endif    
-	  break;
-	case 4:
-	case 8:
-	  ii = eap->map_ldof_to_gdof[k-1];
-	  jj = frame->node[node_no - 1].bound_id[ii-1];
-	  if(jj > 0) {
-	    ep->rp->displ->uMatrix.daa[k-1][i-1] = m1->uMatrix.daa[jj-1][0];
-	    if( UNITS_SWITCH == ON ) {
-	      UnitsCopy(&( ep->rp->displ->spRowUnits[k-1]), &(m1->spRowUnits[jj-1]));
-	      ZeroUnits( &( ep->rp->displ->spColUnits[i-1]) );
-	    }
-	  } else {
-	    ep->rp->displ->uMatrix.daa[k-1][i-1]
-	      = frame->node[node_no -1].disp[ii-1].value;
-	    if( UNITS_SWITCH == ON ) {
-	      UnitsCopy( &( ep->rp->displ->spRowUnits[k-1]),
-			 frame->node[node_no -1].disp[ii-1].dimen);
-	      ZeroUnits( &( ep->rp->displ->spColUnits[i-1]) );
-	    }
-	  }
-	  k = k + 1;
-	  break;
-	default:
-	  break;
-	}
-      }
-    }
-    /* Transfer p to RespondBuffer */
-  SaveRespondBuffer1(ep, elmt_no ); 
-  }
-   
-}
-
 
 /* 
  *  =================================================
@@ -747,17 +588,21 @@ EFRAME *frame;
 int    elmt_no;
 #endif
 {
-
-  ELEMENT *el;
-  int     i,no_dof_per_elmt, *Ld;
-  
+ELEMENT *el;
+int     i,no_dof_per_elmt, *Ld;
+      
 #ifdef DEBUG
-    printf("  entering Destination_Array()  \n");
+    printf(" enter Destination_Array() \n");
+    printf(" in Destination_Array() : \n");
+    printf("                        : frame->no_dof = %d \n", frame->no_dof);
+    printf("                        : frame->no_nodes_per_elmt = %d \n", frame->no_nodes_per_elmt);
 #endif
-    
-  no_dof_per_elmt  = frame->no_dof*frame->no_nodes_per_elmt;
 
+    no_dof_per_elmt  = frame->no_dof*frame->no_nodes_per_elmt;
 
+#ifdef DEBUG
+    printf("                        : no_dof_per_elmt = %d \n", no_dof_per_elmt);
+#endif
 
     Ld = iVectorAlloc((no_dof_per_elmt + 1));
 
@@ -1908,11 +1753,11 @@ int      elmt_no;
 int node_no, elmt_attr_no;
 int  i,j,k,ii,jj, iNoCols;
 
-#ifdef DEBUG
-       printf("*** Enter Get_Stress()\n");
-#endif
+    elmt_no = (int) m1->uMatrix.daa[0][0];
 
-    elmt_no      = (int) m1->uMatrix.daa[0][0];
+#ifdef DEBUG
+       printf("*** Enter Get_Stress() : elmt_no = %d\n", elmt_no );
+#endif
 
     /* Allocate working array for elmt_no and assign element properties */
 
@@ -1999,7 +1844,15 @@ int  i,j,k,ii,jj, iNoCols;
 
    /* Retrieve element level stresses/forces */
 
+#ifdef DEBUG
+       printf("*** Go to elmlib( array, STRESS_MATRIX )\n");
+#endif
+
    array = elmlib(array, STRESS_MATRIX );
+
+#ifdef DEBUG
+       printf("*** Back from elmlib( array, STRESS_MATRIX )\n");
+#endif
 
    /* Transfer "units" to "stress" matrix */
 
@@ -2352,4 +2205,3 @@ MATERIAL_ATTR *map;
 
    return(material);
 }
-

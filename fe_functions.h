@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  fe_functions.h : External Function Declarations for Finite Elements
  *                                                                     
- *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,11 +16,13 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -163,7 +165,6 @@ void       stre06();
 void       tran06();
 double    *pstres06();
 void       shp_prt();
-void       T_Stiffness_2d();
 
 /* functions about 4 node shell elmt */
 
@@ -224,24 +225,17 @@ MATRIX    *Rigid_Body_Rotation_3d();
 MATRIX    *Element_Transformation_3d();
 void       Fiber_Elmt_State_Det_3d();
 
-/* functions declarations for FBEAM element */
-MATRIX    *Local_To_Global_2d();
-
 /* functions for non-linear analysis */
 
 void       SetUpRespondBuffer();
 void       UpdateResponse();
-void       UpdateDispl();
 void       Elmt_State_Det();
 
 void       SaveRespondBuffer();
-void       SaveRespondBuffer1();
 void       save_action();
-void       save_displacement();
 
 void       SetUpFiberRespondBuffer();
 void       SaveFiberRespondBuffer();
 HISTORY_DATA    *FiberElmtHistory();
 
 #endif /* end case FE_FUNCTIONS_H */
-

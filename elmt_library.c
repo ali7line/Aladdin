@@ -1,10 +1,10 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  elmt_library.c : Utility Functions for Element Library
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
@@ -16,11 +16,13 @@
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -52,6 +54,10 @@ int     isw;
 int i,l,m,k;
 static int FLAG;
 
+#ifdef DEBUG
+       printf(" Enter elmtlib() \n");
+#endif
+
     /* For selected element tasks, zero stiffness matrix */
 
     switch ( isw ) {
@@ -82,26 +88,27 @@ static int FLAG;
     /* Switch to element tasks() */
 
     FLAG = FALSE;
-    for(i = 0; i < NO_ELEMENTS_IN_LIBRARY; i++){ 
+    for(i = 0; i < NO_ELEMENTS_IN_LIBRARY; i++) { 
        if(elmt_library[i].name != NULL && Streq(p->elmt_type, elmt_library[i].name)) {
           p =  (*(ARRAY * (*) ()) (elmt_library[i].elmt_lib_func))(p, isw);
           FLAG = TRUE;
           break;
        }
-   }
+    }
+
     if(FLAG == FALSE) {
       printf("FATAL ERROR >> In elmtlib(): \n");
       printf("FATAL ERROR >> elmt_type = %s is not defined in element library: elmt.h \n", p->elmt_type);
       exit(1);
     }
 
-   return(p);
 
 #ifdef DEBUG
        printf(" Leaving elmtlib() \n");
 #endif
-}
 
+   return(p);
+}
 
 /* ============================================================== */
 /*   Assign Properties                                            */
@@ -109,7 +116,8 @@ static int FLAG;
 /* ============================================================== */
 
 #ifdef __STDC__
-EFRAME *assign_properties(EFRAME *frame, ELEMENT_ATTR *eap, MATERIAL_ATTR *map, SECTION_ATTR *sap, FIBER_ELMT *fep, int elmt_no, int n)
+EFRAME *assign_properties(EFRAME *frame, ELEMENT_ATTR *eap, MATERIAL_ATTR *map,
+                          SECTION_ATTR *sap, FIBER_ELMT *fep, int elmt_no, int n)
 #else
 EFRAME *assign_properties(frame, eap, map, sap, fep, elmt_no, n)
 EFRAME       *frame;

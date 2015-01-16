@@ -1,23 +1,26 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *        symbol_load.c : Load Materials and AISC Sections into Symbol Table
+ *  ALADDIN Version 2.1.
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  symbol_load.c : Load materials and AISC sections into symbol table
+ *                                                                     
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
  *  Written by: Mark Austin                                          January 1993
  *  ============================================================================= 
@@ -38,8 +41,7 @@
  *  ------------------------------------
  */
 
-void Load_AISC_Sections()
-{ 
+void Load_AISC_Sections() { 
 char *name;
 FILE   *fp;
 double weight, area, depth;
@@ -52,7 +54,8 @@ DIMENSIONS  *dp_weight, *dp_length, *dimen1, *dimen2;
     /* Open Input File */
  
     if((fp = fopen("section.h", "r")) == NULL) {
-        FatalError("In Load_AISC_Sections() : Can't open 'section.h' data file",(char *)NULL);
+        FatalError("In Load_AISC_Sections() : Can't open 'section.h' data file",
+                  (char *) NULL);
     }
  
     /* Read the File Header */
@@ -130,8 +133,7 @@ DIMENSIONS  *dp_weight, *dp_length, *dimen1, *dimen2;
  *  --------------------------------
  */
  
-void Load_AISC_Material()
-{
+void Load_AISC_Material() {
 FILE      *fp;
 char    *name;
 SYMBOL    *sp;
@@ -143,7 +145,8 @@ DIMENSIONS *dimen;
     /* Open Input File */
  
     if((fp = fopen("material.h", "r")) == NULL) {
-        FatalError("In Load_AISC_Sections() : Can't open 'material.h'",(char *)NULL);
+        FatalError("In Load_AISC_Sections() : Can't open 'material.h'",
+                  (char *) NULL);
     }  
  
     /* Read the header */

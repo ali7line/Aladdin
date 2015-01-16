@@ -4,7 +4,7 @@
 #  Usage : TestInputFile  <optional arguments>
 #        : For a list of options, type "TestInputFile help"
 #
-#  Written by: Mark Austin                                              May 1997
+#  Written by: Mark Austin                                         November 1999
 #  =============================================================================
 
 echo '>>> TestInputFiles : C shell script to test ALADDIN input files '
@@ -34,11 +34,13 @@ foreach index ($value)
       echo '>>> help             list of command options                   '
       echo '>>> basic            physical quantities and control structures'
       echo '>>> matrix           matrices                                  '
-      echo '>>> algo             basic numerical algorithms                '
-      echo '>>> finite           finite element input files                '
-      echo '>>> rule             design rule checking                      '
-      echo '>>> earthquake       Earthquake Applications                   '
-      echo '>>>                                                            '
+      echo '>>> algo             basic numerical algorithms                 '
+      echo '>>> finite           finite element input files                 '
+      echo '>>> nonlinear        nonlinear matrix/finite element analysis   '
+      echo '>>> rule             design rule checking                       '
+      echo '>>> base             Base Isolation Analysis with Fiber Elements'
+      echo '>>> earthquake       Earthquake Applications                    '
+      echo '>>>                                                             '
    endif
 
 #  =========================
@@ -100,9 +102,14 @@ foreach index ($value)
       ALADDIN -f test-suite.d/input-algo-newmark  >! output-algo-newmark
       echo '>>> [4] : Test Modal Analysis (Basic)'
       ALADDIN -f test-suite.d/input-algo-modal-analysis >! output-algo-modal-analysis
+      echo '>>> [5] : Plastic Analysis of 1-dof spring element'
+      ALADDIN -f test-suite.d/input-springs1 >! output-springs1
+      echo '>>> [6] : Force-displacement analysis of 2-dof system with nonlinear springs'
+      ALADDIN -f test-suite.d/input-springs2 >! output-springs2
+      echo '>>> [7] : Dynamic analysis of 2-dof nonlinear spring system'
+      ALADDIN -f test-suite.d/input-springs3 >! output-springs3
 
    endif
-
 
 #  ==================================
 #  Execute finite element input files
@@ -112,13 +119,15 @@ foreach index ($value)
       echo '>>> Test Moment Resistant Frame Input Files'
       echo ''
 
-      echo '>>> [1] : Static Analysis of Cantilever with Point End Load'
+      echo '>>> [1] : Static Analysis of Woolshed'
+      ALADDIN -f test-suite.d/input-woolshed >! output-woolshed
+      echo '>>> [2] : Static Analysis of Cantilever with Point End Load'
       ALADDIN -f test-suite.d/input-cantilever >! output-cantilever
-      echo '>>> [2] : Test Moment Resistant Frame'
+      echo '>>> [3] : Test Moment Resistant Frame'
       ALADDIN -f test-suite.d/input-finite-mrf  >! output-finite-mrf
-      echo '>>> [3] : Modal Analysis of Frame subject to El Centro Ground Motion'
+      echo '>>> [4] : Modal Analysis of Frame subject to El Centro Ground Motion'
       ALADDIN -f test-suite.d/input-elcentro >! output-elcentro
-      echo '>>> [4] : Test Square Plate (shell elmt with drilling dof)'
+      echo '>>> [5] : Test Square Plate (shell elmt with drilling dof)'
       ALADDIN -f test-suite.d/input-finite-square-plate >! output-finite-square-plate
 
       echo ''
@@ -131,6 +140,27 @@ foreach index ($value)
       ALADDIN -f test-suite.d/input-shell-cantilever >! output-shell-cantilever
       echo '>>> [3] : Test I-beam Cantilever (modeled with 4-node shell element)'
       ALADDIN -f test-suite.d/input-ibeam-cantilever >! output-ibeam-cantilever
+      echo '>>> [4] : Structural Analysis of Three-span Beam'
+      ALADDIN -f test-suite.d/input-beam-matrix >! output-beam-matrix
+      echo '>>> [5] : Plane Stress Analysis of Canilever'
+      ALADDIN -f test-suite.d/input-psps-cantilever >! output-psps-cantilever
+      echo '>>> [6] : Plane Strain Analysis of Pipe Cross Section'
+      ALADDIN -f test-suite.d/input-psps-pipe >! output-psps-pipe
+
+   endif
+
+#  ====================================================================
+#  Execute input files for nonlinear matrix and finite element analysis
+#  ====================================================================
+
+   if($index == all || $index == nonlinear ) then
+      echo '>>> Test Nonlinear Matrix and Finite Element Analysis'
+      echo '                                                     '
+
+      echo '>>> [1] : Matrix Analysis of Material Softening Bar'
+      ALADDIN -f test-suite.d/input-softening-bar1 >! output-softening-bar1
+      echo '>>> [2] : F.E. Analysis of Material Softening Bar (FIBER_2D element)'
+      ALADDIN -f test-suite.d/input-softening-bar2 >! output-softening-bar2
 
    endif
 
@@ -159,6 +189,22 @@ foreach index ($value)
       ALADDIN -f test-suite.d/input-modal-analysis >! output-modal-analysis
       echo '>>> [2] : Nonlinear Biaxial analysis of Cantilever Structure'
       ALADDIN -f test-suite.d/input-biaxial >! output-biaxial
+
+   endif
+
+
+#  ==========================================================
+#  Execute input files for behavior of base isolation devices
+#  ==========================================================
+
+   if($index == all || $index == base ) then
+      echo '>>> Test Analysis of Base Isolated Systems'
+      echo ''
+
+      echo '>>> [1] : Force-displacement analysis of one isolator with FIBER_2D  element'
+      ALADDIN -f test-suite.d/input-base-isolator1 >! output-base-isolator1
+      echo '>>> [2] : Force-displacement analysis of one isolator with FIBER_3DS element'
+      ALADDIN -f test-suite.d/input-base-isolator2 >! output-base-isolator2
 
    endif
 

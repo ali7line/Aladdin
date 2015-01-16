@@ -1,25 +1,26 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 2.0 :
+ *  ALADDIN Version 2.1.
  *                                                                     
  *  elmt_frame2d.c : Two-dimensional Beam-Column Element
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  Copyright (C) 1995-2000 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any purpose, and on any
- *  computer system, and to redistribute it freely, subject to the following
- *  restrictions:
+ *  Permission is granted to use this software on any computer system
+ *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
  *     this software, even if they arise from defects in the software.
  *  2. The origin of this software must not be misrepresented, either
  *     by explicit claim or by omission.
- *  3. Altered versions must be plainly marked as such, and must not
+ *  3. Altered versions must be plainly marked as such and must not
  *     be misrepresented as being the original software.
- *  4. This notice is to remain intact.
+ *  4. This software may not be sold or included in commercial software
+ *     products without a license. 
+ *  5. This notice is to remain intact.
  *                                                                    
  *  -------------------------------------------------------------------
  *  Convention for Nodal Forces
@@ -31,7 +32,7 @@
  *             +ve AF    -  Tension(LHS outwards)
  *  -------------------------------------------------------------------
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin         March 2000
  *  ============================================================================= 
  */
 
@@ -109,6 +110,10 @@ ARRAY * sld07( ARRAY *, int );
 double sum, temp;
 int    i, j, k, ii;
 int    UNITS_SWITCH;
+
+#ifdef DEBUG
+       printf("*** Enter elmt_frame_2d() : isw = %d\n", isw );
+#endif
 
     /* [a] : Jump to task case */
 
@@ -475,10 +480,6 @@ int    UNITS_SWITCH;
              break;
         case STIFF: /* form element stiffness */
 
-#ifdef DEBUG
-       printf("*** elmt_frame2d() : Start STIFF \n");
-#endif
-
              cs = p->coord[0][1].value - p->coord[0][0].value;
              sn = p->coord[1][1].value - p->coord[1][0].value;
              xl = sqrt(cs * cs + sn * sn);
@@ -492,10 +493,6 @@ int    UNITS_SWITCH;
              if(p->nodes_per_elmt == 2) /* elastic elment use 2-node elmt */
                 p->stiff = beamst(p, p->stiff, EA, EIzz, xl, cs, sn,
                                   p->size_of_stiff, p->dof_per_node);
-
-#ifdef DEBUG
-       printf("*** elmt_frame2d() : Leave STIFF \n");
-#endif
 
              break;
         case MASS_MATRIX:
