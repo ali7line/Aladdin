@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               code.c : Functions for Stack Machine
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  code.c : Functions for Stack Machine
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 #include <stdio.h>
@@ -33,14 +34,15 @@
 #include "fe_database.h"
 #include "symbol.h"
 #include "code.h"
+#include "vector.h"
 #include "fe_functions.h"
 #include "y.tab.h"
 
 /* Setup Program Stack */
 
-#define  NSTACK    200
-#define  NPROG    5500
-#define  NFRAME    500
+#define  NSTACK   1500
+#define  NPROG    5000
+#define  NFRAME      5
 
 /* Setup Stack Frame for Program Machine */
 
@@ -113,7 +115,8 @@ Inst *p;
 {
     for(pc = p; *pc != STOP && !returning; ) {
         pc = pc+1;
-        if(Check_Break()) break;
+        if(Check_Break())
+           break;
         (*(*(pc-1)))();
     }
 }
@@ -170,7 +173,8 @@ DATUM d;
  *  ---------------------------------------------------------
  */
 
-int While_Code() {
+int While_Code()
+{
 DATUM d;
 Inst *savepc = pc;
 
@@ -223,7 +227,8 @@ Inst *savepc = pc;
 	pc = *((Inst **)(savepc + 2));   /* next statement */
 }
 
-int For_Code() {
+int For_Code()
+{
 DATUM d;
 Inst *savepc = pc;
 
@@ -279,7 +284,7 @@ int Call()
 SYMBOL *sp = (SYMBOL *) pc[0];
 
      if(fp++ >= &frame_in_code[NFRAME - 1])
-        EXECUTION_ERROR(sp->cpSymName, "ERROR >> Call nested too deeply");
+        EXECUTION_ERROR(sp->cpSymName, "ERROR >> Call nested too deeply", (char *) 0);
 
      fp->sp    = sp;
      fp->nargs = (int) pc[1];
@@ -482,6 +487,44 @@ int      length;
          break;
       default:          
          FatalError("In Div() : CheckUnits is not ON or OFF",(char *)NULL);
+         break;
+    }
+    free((char *) d1.q);
+    free((char *) d2.q);
+    Push(d);
+}
+
+int Quantity_Mod()
+{
+DATUM d1, d2, d;
+int      length;
+
+    d2 = Pop();  /* 2nd quantity, d2.q */
+    d1 = Pop();  /* 1st quantity, d1.q */
+    d.q        = (QUANTITY *) MyCalloc(1,sizeof(QUANTITY));
+
+    if(d2.q->value != 0) {
+       if( ( (double)(int)d1.q->value != d1.q->value ) ||
+           ( (double)(int)d2.q->value != d2.q->value ) )
+          FatalError("In Quantity_Mod() : operands of % (mod) must be integers",(char *)NULL);
+       else
+          d.q->value = ((int) d1.q->value) % ((int) d2.q->value);
+    }
+    else
+       FatalError("In Quantity_Mod() : Attempt to divide by zero",(char *)NULL);
+
+    switch(CheckUnits()) {
+      case ON:
+         d.q->dimen = UnitsDiv( d1.q->dimen, d2.q->dimen, NO );
+         free((char *) d1.q->dimen->units_name);
+         free((char *) d1.q->dimen);
+         free((char *) d2.q->dimen->units_name);
+         free((char *) d2.q->dimen);
+         break;
+      case OFF:
+         break;
+      default:          
+         FatalError("In Mod() : CheckUnits is not ON or OFF",(char *)NULL);
          break;
     }
     free((char *) d1.q);
@@ -1222,13 +1265,11 @@ int        UNITS_SWITCH;
                 if( UNITS_SWITCH == ON )
                     UnitsCopy(&(d1.sym->u.m->spRowUnits[i-1]),&(d2.m->spRowUnits[i-1])); 
 
-                iColHeight = (int) MAX(d1.sym->u.m->uMatrix.daa[i-1][0],
-                                       d2.m->uMatrix.daa[i-1][0]);
-                if( iColHeight > d1.sym->u.m->uMatrix.daa[i-1][0] ) {
+                if( d2.m->uMatrix.daa[i-1][0] != d1.sym->u.m->uMatrix.daa[i-1][0] ) {
                    free( d1.sym->u.m->uMatrix.daa[i-1] );
                    d1.sym->u.m->uMatrix.daa[i-1] 
-                   = (double *)MyCalloc((iColHeight+1), sizeof(double));
-                   d1.sym->u.m->uMatrix.daa[i-1][0] = iColHeight;
+                   = (double *)MyCalloc((d2.m->uMatrix.daa[i-1][0]+1), sizeof(double));
+                   d1.sym->u.m->uMatrix.daa[i-1][0] = d2.m->uMatrix.daa[i-1][0];
                 }
                 for(j = 1; j <= d2.m->uMatrix.daa[i-1][0]; j++) 
                    d1.sym->u.m->uMatrix.daa[i-1][j]  = d2.m->uMatrix.daa[i-1][j];
@@ -1513,13 +1554,13 @@ int UnitsType;
            UnitsType = CheckUnitsType(); 
            switch(UnitsType) { 
              case SI:
-              if(!strcmp(d.q->dimen->units_name, "deg_F") )
-                 d.q->value = ConvertTempUnits(d.q->dimen->units_name, d.q->value, US); 
-             break;
+                  if(!strcmp(d.q->dimen->units_name, "deg_F") )
+                     d.q->value = ConvertTempUnits(d.q->dimen->units_name, d.q->value, US); 
+                  break;
              case US:
-              if(!strcmp(d.q->dimen->units_name, "deg_C") ) 
-                 d.q->value = ConvertTempUnits(d.q->dimen->units_name, d.q->value, SI); 
-             break;
+                  if(!strcmp(d.q->dimen->units_name, "deg_C") ) 
+                     d.q->value = ConvertTempUnits(d.q->dimen->units_name, d.q->value, SI); 
+                  break;
            }
            printf("%10.4g ", d.q->value/d.q->dimen->scale_factor);
            printf("%s ", d.q->dimen->units_name);
@@ -1540,59 +1581,74 @@ int UnitsType;
     free((char *) d.q);
 }
 
-int Print_Dimen_Expr()
-{
+/*
+ *  =================================================
+ *  Print_Dimen_Expr() : Print Dimensional Expression
+ *  =================================================
+ */
+
+int Print_Dimen_Expr() {
 DATUM d1, d2;
 int UnitsType;
+
+#ifdef DEBUG
+       printf("*** Enter Print_Dimen_Expr()\n");
+#endif
 
     d2 = Pop(); /* units    */
     d1 = Pop(); /* quantity */
 
+#ifdef DEBUG
+       printf("*** d1.q->value = %10.5f\n", d1.q->value );
+#endif
+
     switch(CheckUnits()) {
       case ON:
-       if(SameUnits(d1.q->dimen, d2.q->dimen) == TRUE) {
-         if(d2.q->dimen->units_name != NULL) {
-           UnitsType = CheckUnitsType(); 
-           switch(UnitsType) {
-             case SI:
-              if(!strcmp(d2.q->dimen->units_name, "deg_F")) 
-                 d1.q->value = ConvertTempUnits(d1.q->dimen->units_name, d1.q->value, US);
-             break;
-             case US:
-              if(!strcmp(d2.q->dimen->units_name, "deg_C")) 
-                 d1.q->value = ConvertTempUnits(d1.q->dimen->units_name, d1.q->value, SI);
-             break;
+           if(SameUnits(d1.q->dimen, d2.q->dimen) == TRUE) {
+           if(d2.q->dimen->units_name != NULL) {
+              UnitsType = CheckUnitsType(); 
+              switch(UnitsType) {
+                 case SI:
+                      if(!strcmp(d2.q->dimen->units_name, "deg_F")) 
+                         d1.q->value = ConvertTempUnits(d1.q->dimen->units_name, d1.q->value, US);
+                      break;
+                 case US:
+                      if(!strcmp(d2.q->dimen->units_name, "deg_C")) 
+                         d1.q->value = ConvertTempUnits(d1.q->dimen->units_name, d1.q->value, SI);
+                      break;
+              }
+              printf("%10.4g ", d1.q->value/d2.q->dimen->scale_factor);
+              printf("%s ", d2.q->dimen->units_name);
+              free((char *) d2.q->dimen->units_name);
+           } else {
+              printf("%10.4g ", d1.q->value);
            }
-           printf("%10.4g ", d1.q->value/d2.q->dimen->scale_factor);
-           printf("%s ", d2.q->dimen->units_name);
-           free((char *) d2.q->dimen->units_name);
-
-         } else {
-           printf("%10.4g ", d1.q->value);
-         }
-         fflush(stdout);
-         free((char *) d1.q->dimen->units_name);
-         free((char *) d1.q->dimen);
-         free((char *) d2.q->dimen);
-       }
-       else {
-         printf(" Wanted units_name   = %s\n", d2.q->dimen->units_name);
-         printf(" quantity units_name = %s\n", d1.q->dimen->units_name);
-         FatalError(" In Print_Dimen_Expr(): ",
-           "Try to print quantity with inconsistent units",
-           (char *) NULL);
-       }
-
-         break;
+           fflush(stdout);
+           free((char *) d1.q->dimen->units_name);
+           free((char *) d1.q->dimen);
+           free((char *) d2.q->dimen);
+           } else {
+             printf(" Wanted units_name   = %s\n", d2.q->dimen->units_name);
+             printf(" quantity units_name = %s\n", d1.q->dimen->units_name);
+             FatalError(" In Print_Dimen_Expr(): ",
+                        "Try to print quantity with inconsistent units",
+                        (char *) NULL);
+           }
+           break;
       case OFF:
-         printf("%10.4g ", d1.q->value);
-         break;
+           printf("%10.4g ", d1.q->value);
+           break;
       default:          
-         FatalError("In Print_Dimen_Expr() : CheckUnits is not ON or OFF",(char *)NULL);
-         break;
+           FatalError("In Print_Dimen_Expr() : CheckUnits is not ON or OFF",(char *)NULL);
+           break;
     }
     free((char *) d1.q);
     free((char *) d2.q);
+
+#ifdef DEBUG
+       printf("*** Leave Print_Dimen_Expr()\n");
+#endif
+
 }
 
 int Print_String()
@@ -2007,6 +2063,7 @@ DATUM d;
         d.q->dimen->mass_expnt   = 0.0;
         d.q->dimen->time_expnt   = 0.0;
         d.q->dimen->temp_expnt   = 0.0;
+        d.q->dimen->radian_expnt = 0.0;
     }
     else
         d.q->dimen = (DIMENSIONS *)NULL;
@@ -2327,24 +2384,24 @@ DATUM d1;
    Push(d1);
 }
 
-int Bltin_Print_Displ()
+int Bltin_Fe_Function()
+{
+DATUM d1;
+
+   (*(void (*)())*pc)();
+   pc = pc + 1;
+   Push(d1);
+}
+
+int Bltin1_Fe_Function()
 {
 DATUM d1, d;
 
    d1 = Pop();
-   Print_Displ(d1.m);
+   (*(void (*)())*pc)( d1.m );
    MatrixFree(d1.m);
    pc = pc + 1;
    Push(d);
-}
-
-int Bltin_Update_Resp()
-{
-DATUM d1;
-
-   UpdateResponse();
-   pc = pc + 1;
-   Push(d1);
 }
 
 /* 
@@ -2353,7 +2410,8 @@ DATUM d1;
  *  ------------------------------------------------------
  */ 
 
-int Bltin_Element_Attr() {
+int Bltin_Element_Attr()
+{
 DATUM d1, d2, d3, d4, d5; 
 ELEMENT_ATTR   *eap;
 SYMBOL         *hp;
@@ -2382,20 +2440,21 @@ int  i, length;
 	   hp = lookup(d3.sym->cpSymName);
 	   switch(hp->type) {
                case TYPE:
-		 eap->elmt_type = SaveString((char *) d4.sym);
-	         break;
+	            eap->elmt_type = SaveString((char *) d4.sym);
+	            break;
                case SECTION:
-		 eap->section = SaveString((char *) d4.sym);
-	         break;
+	            eap->section = SaveString((char *) d4.sym);
+	            break;
                case MATERIAL:
-		 eap->material = SaveString((char *) d4.sym);
-	         break;
+	            eap->material = SaveString((char *) d4.sym);
+	            break;
                case FIBER:
-		 eap->fiber_attr_name = SaveString((char *) d4.sym);
-	         break;
+	            eap->fiber_attr_name = SaveString((char *) d4.sym);
+	            break;
                default:
-                 break;
+                    break;
 	   }
+	   free((char *) d4.sym);
         }
         else {
           if(d3.m->iNoRows    != d4.m->iNoRows ||
@@ -2403,14 +2462,20 @@ int  i, length;
              printf("local dof matrix and global dof matrix should have same dimensions\n");
              FatalError("In input file: ElementAttr{} ",(char *)NULL);
           }
-          else
+          else {
              Ldof_to_gdof(eap, d4.m, d3.m);
+             PRINT_MAP_DOF = ON;
+	     MatrixFree( d3.m );
+	     MatrixFree( d4.m );
+	  }
         }
      }
      Add_Element_Attr((char *) d1.sym, eap);
+     free((char *) d1.sym);
 }
 
-int Bltin_Section_Attr() {
+int Bltin_Section_Attr()
+{
 DATUM d1, d2, d3, d4; 
 SECTION_ATTR     *sp;
 SECTION_ATTR     *sp_temp;
@@ -2429,131 +2494,172 @@ int  UNITS_SWITCH;
         d4 = Pop();   /* section property, d4.q */
 
         /* Check_TYPE */
-        if(d3.sym->type != VAR &&
-           d3.sym->type != QUAN) {
-           FatalError("Syntax error in inputfile: SectionAtr{}",
-           " Only Quantities can be put in section attributes",(char *)NULL);
+        if(d3.sym->type != VAR && d3.sym->type != QUAN) 
+             FatalError("Syntax error in inputfile: SectionAtr{}",
+             " Only Quantities can be put in section attributes",(char *)NULL);
+
+        if(!strcmp(d3.sym->cpSymName , "Ixx")) {
+           sp->Ixx.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Ixx.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+	      UnitsCopy( sp->Ixx.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
         }
-            if(!strcmp(d3.sym->cpSymName , "Ixx")) {
-		 sp->Ixx.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Ixx.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Ixx.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "Iyy")) {
-		 sp->Iyy.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Iyy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Iyy.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "Izz")) {
-		 sp->Izz.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Izz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Izz.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"Ixz") || !strcmp(d3.sym->cpSymName,"Izx") ){
-		 sp->Ixz.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Ixz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Ixz.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"Ixy") || !strcmp(d3.sym->cpSymName,"Iyx") ){
-		 sp->Ixy.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Ixy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Ixy.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"Iyz") || !strcmp(d3.sym->cpSymName,"Izy") ){
-		 sp->Iyz.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->Iyz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->Iyz.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "unit_weight")) {
-		 sp->weight.value  = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->weight.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->weight.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "bf")) {
-		 sp->bf.value  = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->bf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->bf.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "tf")) {
-		 sp->tf.value  = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->tf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->tf.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "depth")) {
-		 sp->depth.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->depth.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->depth.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "area")) {
-		 sp->area.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->area.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->area.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "thickness")) {
-		 sp->plate_thickness.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->plate_thickness.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->plate_thickness.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"J") ){
-                 sp->tor_const.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->tor_const.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->tor_const.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"rT") ){
-                 sp->rT.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->rT.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->rT.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName , "width")) {
-		 sp->width.value  = d4.q->value;
-		 sp->bf.value  = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->width.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->width.dimen, sizeof(DIMENSIONS));      
-                     sp->bf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->bf.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
-            else if(!strcmp(d3.sym->cpSymName,"tw") ){
-                 sp->tw.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     sp->tw.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,sp->tw.dimen, sizeof(DIMENSIONS));      
-	         }
-            }
+        else if(!strcmp(d3.sym->cpSymName , "Iyy")) {
+           sp->Iyy.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Iyy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->Iyy.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "Izz")) {
+           sp->Izz.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Izz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+	      UnitsCopy( sp->Izz.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"Ixz") || !strcmp(d3.sym->cpSymName,"Izx") ){
+           sp->Ixz.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Ixz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->Ixz.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"Ixy") || !strcmp(d3.sym->cpSymName,"Iyx") ){
+           sp->Ixy.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Ixy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->Ixy.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"Iyz") || !strcmp(d3.sym->cpSymName,"Izy") ){
+           sp->Iyz.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->Iyz.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->Iyz.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "unit_weight")) {
+           sp->weight.value  = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->weight.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->weight.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "bf")) {
+           sp->bf.value  = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->bf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->bf.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "tf")) {
+           sp->tf.value  = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->tf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->tf.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "depth")) {
+           sp->depth.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->depth.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->depth.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "area")) {
+           sp->area.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->area.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->area.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "thickness")) {
+           sp->plate_thickness.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->plate_thickness.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->plate_thickness.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"J") ){
+           sp->tor_const.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->tor_const.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->tor_const.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"rT") ){
+           sp->rT.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->rT.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->rT.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName , "width")) {
+           sp->width.value  = d4.q->value;
+           sp->bf.value  = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->width.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->width.dimen,  d4.q->dimen );
+              sp->bf.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->bf.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"tw") ){
+           sp->tw.value = d4.q->value;
+           if(UNITS_SWITCH == ON) {
+              sp->tw.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              UnitsCopy( sp->tw.dimen,  d4.q->dimen );
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+        else if(!strcmp(d3.sym->cpSymName,"shear_factor")) {
+           sp->ks = d4.q->value;
+	   if(UNITS_SWITCH == ON) {
+              free((char *) d4.q->dimen->units_name);
+              free((char *) d4.q->dimen);
+           }
+        }
+	free((char *) d4.q);
      }
      Add_Section_Attr((char *) d1.sym, sp);
+     free((char *) d1.sym);
 }
 
-int Bltin_Material_Attr() {
+int Bltin_Material_Attr()
+{
 DATUM d1, d2, d3, d4; 
 MATERIAL_ATTR    *mp;
 SECTION_ATTR     *sp_temp;
@@ -2569,96 +2675,134 @@ int  UNITS_SWITCH;
 
      mp = Alloc_Material_Attr_Item();
      for(i = 1; i <= length; i++) {
-        d3 = Pop();    /* name */
+        d3 = Pop();    /* name ( stored in hash table ) */
         d4 = Pop();   /* scale factor and dimensions */
 
         switch(d3.sym->type) {
           case TYPE:
             mp->LC_ptr->name = SaveString((char *) d4.sym);
+	    free((char *) d4.sym);
             break;
           case QUAN:
           case VAR:
             if(!strcmp(d3.sym->cpSymName,"E")) {
-                 if(d4.q->value <= 0.0)
-                    FatalError("Young's Modulus E cannot be less of equal to 0",
-                              (char *)NULL);
+               if(d4.q->value <= 0.0)
+                  FatalError("Young's Modulus E cannot be less of equal to 0", (char *)NULL);
 
-                 mp->E.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->E.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen, mp->E.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->E.value = d4.q->value;
+               if(UNITS_SWITCH == ON) {
+                  mp->E.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->E.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"Et")) {
-                 mp->ET.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->ET.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->ET.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->ET.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->ET.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->ET.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"G")) {
-                 mp->G.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->G.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->G.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->G.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->G.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->G.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"Gt")) {
-                 mp->Gt.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->Gt.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->Gt.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->Gt.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->Gt.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->Gt.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"poisson")) {
-                 mp->nu      = d4.q->value;
-            }
-            else if(!strcmp(d3.sym->cpSymName,"shear_factor")) {
-                 mp->ks      = d4.q->value;
+               mp->nu = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"density")) {
-                 mp->density.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->density.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->density.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->density.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->density.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->density.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"yield")) {
-                 mp->fy.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->fy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->fy.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->fy.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->fy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->fy.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"shear_yield")) {
-                 mp->fv.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->fv.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->fv.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->fv.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->fv.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->fv.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"ultimate")) {
-                 mp->fu.value = d4.q->value;
-	         if(UNITS_SWITCH == ON) {
-                     mp->fu.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-		     bcopy(d4.q->dimen,mp->fu.dimen, sizeof(DIMENSIONS));      
-	         }
+               mp->fu.value = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  mp->fu.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                  UnitsCopy( mp->fu.dimen,  d4.q->dimen );
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"n")) {
-                 mp->LC_ptr->n  = d4.q->value;
+               mp->LC_ptr->n = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"alpha")) {
-                 mp->LC_ptr->alpha  = d4.q->value;
+               mp->LC_ptr->alpha = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"beta")) {
-                 mp->LC_ptr->beta   = d4.q->value;
+               mp->LC_ptr->beta = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"ialph")) {
-                 mp->LC_ptr->ialph   = (int) d4.q->value;
+               mp->LC_ptr->ialph = (int) d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
             else if(!strcmp(d3.sym->cpSymName,"pen")) {
-                 mp->LC_ptr->pen   = d4.q->value;
+               mp->LC_ptr->pen = d4.q->value;
+	       if(UNITS_SWITCH == ON) {
+                  free((char *) d4.q->dimen->units_name);
+                  free((char *) d4.q->dimen);
+               }
             }
+	    free((char *) d4.q);
             break;
           default:
             printf("type = d3.sym->type = %d \n", d3.sym->type);
@@ -2667,70 +2811,201 @@ int  UNITS_SWITCH;
         }
      }
      Add_Material_Attr((char *) d1.sym, mp);
+     free((char *) d1.sym);
 }
 
-int Bltin_Fiber_Attr() {
+int Bltin_Fiber_Attr()
+{
 DATUM d1, d2, d3, d4, d5; 
-FIBER_ELMT      *fep;
 SYMBOL           *hp;
 int  i, j, k, length;
-int  no_fiber;
-double            da;
 DIMENSIONS    *dimen;
-int  UNITS_SWITCH;
+int     UNITS_SWITCH;
 
+FIBER_ELMT      *fep;
+int         no_fiber;
+int        *attr_map;
+MATRIX         *attr;
+int no_material_attr;
+
+     UNITS_SWITCH = CheckUnits();
      d1 = Pop(); /* number of fibers, d1.q, NoFiber */
      d2 = Pop(); /* fiber attribute name, (char *)d2.sym, "FiberName" */
      d3 = Pop(); /* number of fiber property items, (int)d3.sym */
      length = (int) d3.sym;
-     UNITS_SWITCH = CheckUnits();
 
      no_fiber = d1.q->value;
+     if(UNITS_SWITCH == ON) {
+        free((char *) d1.q->dimen->units_name);
+        free((char *) d1.q->dimen);
+     }
+     free((char *) d1.q);
+
      fep = Alloc_Fiber_Elmt_Attr_Item( no_fiber );
+
+     no_material_attr = 0;
+     attr = (MATRIX *)NULL;
+     attr_map = (int *)NULL;
+
      for(i = 1; i <= length; i++) {
         d4 = Pop();   /* variable name, d4.sym */
         d5 = Pop();   /* fiber property matrix, d5.m */
 
         if(!strcmp(d4.sym->cpSymName , "FiberCoordinate")) {
-	   if( d5.m->iNoRows != no_fiber )
+	   if( d5.m->iNoColumns != no_fiber )
               FatalError("in FiberAttr: FiberCoordinate",
-	                 "no. of matrix rows != NoFiber",(char *)NULL);
+	                 "no. of matrix columns != NoFiber",(char *)NULL);
 	   for( j=1 ; j <= no_fiber ; j++ ) {
-	      da = MatrixContentScale( d5.m, j, 1 );
-	      fep->fiber[j-1].y.value = da;
-	      if( d5.m->iNoColumns > 1 ) {
-	         da = MatrixContentScale( d5.m, j, 2 );
-	         fep->fiber[j-1].z.value = da;
-	      }
+	      fep->fiber[j-1].y.value = d5.m->uMatrix.daa[0][j-1];
+	      if( d5.m->iNoRows > 1 )
+	         fep->fiber[j-1].z.value = d5.m->uMatrix.daa[1][j-1];
 	      else
 	         fep->fiber[j-1].z.value = 0.0;
 
               if(UNITS_SWITCH == ON) {
-                fep->fiber[j-1].y.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
-                fep->fiber[j-1].z.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                 fep->fiber[j-1].y.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+                 fep->fiber[j-1].z.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
 
-		dimen = UnitsMult( &(d5.m->spRowUnits[j-1]), &(d5.m->spColUnits[0]) );
-	        bcopy(dimen,fep->fiber[j-1].y.dimen, sizeof(DIMENSIONS));      
-	        if( d5.m->iNoColumns > 1 ) {
-		  free((char *)dimen);
-		  dimen = UnitsMult( &(d5.m->spRowUnits[j-1]), &(d5.m->spColUnits[1]) );
-	          bcopy(dimen,fep->fiber[j-1].z.dimen, sizeof(DIMENSIONS));      
-		  free((char *)dimen);
-	        }
-	        else {
-	          bcopy(dimen,fep->fiber[j-1].z.dimen, sizeof(DIMENSIONS));      
-		  free((char *)dimen);
-	        }
+		 dimen = UnitsMult( &(d5.m->spRowUnits[0]), &(d5.m->spColUnits[j-1]) );
+                 UnitsCopy( fep->fiber[j-1].y.dimen, dimen );
+	         if( d5.m->iNoRows > 1 ) {
+		    free((char *) dimen->units_name);
+		    free((char *)dimen);
+		    dimen = UnitsMult( &(d5.m->spRowUnits[1]), &(d5.m->spColUnits[j-1]) );
+                    UnitsCopy( fep->fiber[j-1].z.dimen, dimen );
+		    free((char *) dimen->units_name);
+		    free((char *)dimen);
+	         }
+	         else {
+                    UnitsCopy( fep->fiber[j-1].z.dimen, dimen );
+		    free((char *) dimen->units_name);
+		    free((char *) dimen);
+	         }
               }
            }
-	   free((char *)d4.sym->cpSymName);
 	   MatrixFree(d5.m);
-        } /* end of one variable item */
+        } /* end of install FiberCoordinate matrix into hash table */
+
+        else if(!strcmp(d4.sym->cpSymName , "FiberArea")) {
+	   if( d5.m->iNoColumns != no_fiber )
+              FatalError("in FiberAttr: FiberArea",
+	                 "no. of matrix columns != NoFiber",(char *)NULL);
+	   for( j=1 ; j <= no_fiber ; j++ ) {
+	      fep->fiber[j-1].area.value = d5.m->uMatrix.daa[0][j-1];
+
+              if(UNITS_SWITCH == ON) {
+                 fep->fiber[j-1].area.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+		 dimen = UnitsMult( &(d5.m->spRowUnits[0]), &(d5.m->spColUnits[j-1]) );
+                 UnitsCopy( fep->fiber[j-1].area.dimen, dimen );
+		 free((char *) dimen->units_name);
+		 free((char *) dimen);
+              }
+           }
+	   MatrixFree(d5.m);
+        } /* end of install FiberArea matrix into hash table */
+
+        else if(!strcmp(d4.sym->cpSymName , "FiberMaterialMap")) {
+	   if( d5.m->iNoColumns != no_fiber )
+              FatalError("in FiberAttr: FiberMaterialMap",
+	                 "no. of matrix columns != NoFiber",(char *)NULL);
+
+           /* index array to store fiber material map */
+           attr_map = (int *)MyCalloc( no_fiber, sizeof(int) );
+
+	   for( j=1 ; j <= no_fiber ; j++ )
+	      attr_map[j-1] = (int) d5.m->uMatrix.daa[0][j-1];
+
+	   MatrixFree(d5.m);
+        } /* end of temporyly store FiberMaterialMap matrix into index array attr_map */
+
+        else if(!strcmp(d4.sym->cpSymName , "FiberMaterialAttr")) {
+	   if( d5.m->iNoRows != 3 && d5.m->iNoRows != 6 )
+              FatalError("in FiberAttr: FiberMaterialAttr",
+	                 "no. of matrix rows != 3 or 6",
+			 "example: [E1, E2; Et1, Et2; fy1, fy2] for FIBER_*D",
+			 "example: [E1,E2; Et1,Et2; fy1,fy2; G1,G2; Gt1,Gt2; fv1,fv2] for FIBER_*DS", (char *)NULL);
+
+	   no_material_attr = d5.m->iNoColumns;
+	   attr = MatrixCopy( d5.m );
+
+	   MatrixFree(d5.m);
+        } /* end of temporyly store FiberMaterialAttr matrix into attribute matrix attr */
      }
+
+     if( attr == (MATRIX *)NULL )
+	FatalError("in FiberAttr: Must give FiberMaterialAttr", (char *)NULL);
+     if( attr_map == (int *)NULL )
+	FatalError("in FiberAttr: Must give FiberMaterialMap", (char *)NULL);
+
+     /* install the fiber attribution into hash table */
+     for( i=1 ; i <= no_fiber ; i++ ) {
+	j = attr_map[i-1];
+	fep->fiber[i-1].Es.value = attr->uMatrix.daa[0][j-1];
+	fep->fiber[i-1].Et.value = attr->uMatrix.daa[1][j-1];
+	fep->fiber[i-1].fy.value = attr->uMatrix.daa[2][j-1];
+	if( attr->iNoRows == 6 ) {
+	   fep->fiber[i-1].Gs.value = attr->uMatrix.daa[3][j-1];
+	   fep->fiber[i-1].Gt.value = attr->uMatrix.daa[4][j-1];
+	   fep->fiber[i-1].fv.value = attr->uMatrix.daa[5][j-1];
+        }
+        else {
+	   fep->fiber[i-1].Gs.value = 0.0;
+	   fep->fiber[i-1].Gt.value = 0.0;
+	   fep->fiber[i-1].fv.value = 0.0;
+        }
+
+        if(UNITS_SWITCH == ON) {
+           fep->fiber[i-1].Es.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+           fep->fiber[i-1].Et.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+           fep->fiber[i-1].fy.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+
+           dimen = UnitsMult( &(attr->spRowUnits[0]), &(attr->spColUnits[j-1]) );
+           UnitsCopy( fep->fiber[i-1].Es.dimen, dimen );
+           free((char *) dimen->units_name);
+           free((char *) dimen);
+           dimen = UnitsMult( &(attr->spRowUnits[1]), &(attr->spColUnits[j-1]) );
+           UnitsCopy( fep->fiber[i-1].Et.dimen, dimen );
+           free((char *) dimen->units_name);
+           free((char *) dimen);
+           dimen = UnitsMult( &(attr->spRowUnits[2]), &(attr->spColUnits[j-1]) );
+           UnitsCopy( fep->fiber[i-1].fy.dimen, dimen );
+           free((char *) dimen->units_name);
+           free((char *) dimen);
+
+	   if( attr->iNoRows == 6 ) {
+              fep->fiber[i-1].Gs.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              fep->fiber[i-1].Gt.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+              fep->fiber[i-1].fv.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+
+              dimen = UnitsMult( &(attr->spRowUnits[3]), &(attr->spColUnits[j-1]) );
+              UnitsCopy( fep->fiber[i-1].Gs.dimen, dimen );
+              free((char *) dimen->units_name);
+              free((char *) dimen);
+              dimen = UnitsMult( &(attr->spRowUnits[4]), &(attr->spColUnits[j-1]) );
+              UnitsCopy( fep->fiber[i-1].Gt.dimen, dimen );
+              free((char *) dimen->units_name);
+              free((char *) dimen);
+              dimen = UnitsMult( &(attr->spRowUnits[5]), &(attr->spColUnits[j-1]) );
+              UnitsCopy( fep->fiber[i-1].fv.dimen, dimen );
+              free((char *) dimen->units_name);
+              free((char *) dimen);
+           }
+	   else {
+              fep->fiber[i-1].Gs.dimen  = (DIMENSIONS *) NULL;
+              fep->fiber[i-1].Gt.dimen  = (DIMENSIONS *) NULL;
+              fep->fiber[i-1].fv.dimen  = (DIMENSIONS *) NULL;
+           }
+        }
+     }
+     free( (char *) attr_map );
+     MatrixFree( attr );
+
      Add_Fiber_Elmt_Attr((char *) d2.sym, fep);
+     free((char *) d2.sym);
 }
 
-int Bltin_Units_Type() {
+int Bltin_Units_Type()
+{
 DATUM d1;
 char  *type;
 
@@ -2738,11 +3013,11 @@ char  *type;
      type = (char *)d1.sym;
 
      if( !strcmp(type,"US") )
-         UNITS_TYPE = US;
+         ChangeUnitsType( 1 );
      else  if( !strcmp(type,"SI") )
-         UNITS_TYPE = SI;
+         ChangeUnitsType( 2 );
      else  if( !strcmp(type,"SI_US") )
-         UNITS_TYPE = SI_US;
+         ChangeUnitsType( 3 );
      else
          FatalError("The Units_Type string in input file, SetUnitsType(\"Units_Type\")",
          "In Bltin_Units_Type() : Must give the type of SI, US, or SI_US",(char *)NULL);

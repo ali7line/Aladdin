@@ -7,6 +7,10 @@
 /*    (2) math functions                              */
 /*  ================================================  */
 
+print  "==============================\n";
+print  "*** Test Arithmetic Operations\n";
+print  "==============================\n\n";
+
 /* [a] Arithmetic operations */
 
 x  = 10 g;
@@ -86,3 +90,7 @@ print "*** (x*z)^2       = ", (x*z)^2, "\n";
 print "\n ERROR INDICATION ON UNITS CONSISTENCY \n";
 
 print "W =  1 m + 3 g \n", 1m + 3g;
+
+print  "===============\n";
+print  "*** End of Test\n";
+print  "===============\n\n";

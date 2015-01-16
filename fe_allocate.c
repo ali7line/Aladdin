@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *        fe_allocate.c : Allocation Functions for Finite Elements
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  fe_allocate.c : Allocation Functions for Finite Elements
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -27,14 +28,12 @@
 #include <ctype.h>
 
 #include "defs.h"
-
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "code.h"
-#include "y.tab.h"
-
+#include "fe_functions.h"
 
 /*
 #define DEBUG
@@ -55,8 +54,7 @@ int  max_no_loaded_elmts;
 /* Allocate space for Element, Section and Material Attributes */
 /* =========================================================== */
 
-ELEMENT_ATTR *Alloc_Element_Attr_Item() 
-{
+ELEMENT_ATTR *Alloc_Element_Attr_Item() {
 ELEMENT_ATTR *eap;
 int             i;
 
@@ -80,16 +78,14 @@ int             i;
       return(eap);
 }
 
-SECTION_ATTR *Alloc_Section_Attr_Item()
-{
+SECTION_ATTR *Alloc_Section_Attr_Item() {
 SECTION_ATTR *sp;
 
       sp = (SECTION_ATTR *) MyCalloc(1, sizeof(SECTION_ATTR));
       return(sp);
 }
 
-MATERIAL_ATTR *Alloc_Material_Attr_Item() 
-{
+MATERIAL_ATTR *Alloc_Material_Attr_Item() {
 MATERIAL_ATTR       *mp;
 SYMBOL             *slp;
 int    iInPlaneIntegPts;
@@ -98,7 +94,7 @@ int       iNO_INTEG_pts;
 
       slp = lookup("InPlaneIntegPts");   /* number of integration pts in plane/surface      */
       if(slp == NULL)
-         iInPlaneIntegPts = 2*2;        /* 2x2 as default */
+         iInPlaneIntegPts = 2*2;         /* 2x2 as default */
       else
          iInPlaneIntegPts = (int) slp->u.q->value;
 
@@ -246,6 +242,23 @@ int iThicknessIntegPts;
     sp = lookup("MaxNodesPerElement"); /* Max no nodes per element */
     frp->no_nodes_per_elmt = (int) sp->u.q->value;
 
+    sp = lookup("GaussIntegPts"); /* section no.(integration pts) along element */
+    if(sp == NULL)
+       frp->no_integ_pt = UNIT_INTEG_PTS;        /* 2 as default */
+    else {
+       if( (int)sp->u.q->value < 2 ) {
+          printf("\nWARNING : The value of GaussIntegPts can not less than 2!");
+          printf("\n          Use 2 Gauss Integration points.\n");
+          sp->u.q->value = (double) 2;
+       }
+       else if( (int)sp->u.q->value > 10 ) {
+          printf("\nWARNING : ALADDIN does not support GaussIntegPts more than 10!");
+          printf("\n          Use 10 Gauss Integration points.\n");
+          sp->u.q->value = (double) 10;
+       }
+       frp->no_integ_pt = (int) sp->u.q->value;
+    }
+
     sp = lookup("InPlaneIntegPts");   /* number of integration pts in plane/surface      */
     if(sp == NULL) 
        iInPlaneIntegPts = 2*2;        /* 2x2 as default */
@@ -318,9 +331,9 @@ int iThicknessIntegPts;
 
         ep->rp->Forces     = MatrixAllocIndirect("nodal_force",DOUBLE_ARRAY,frp->no_dof,UNIT_NODES);
 
-        ep->rp->displ     = MatrixAllocIndirect("displ", DOUBLE_ARRAY, frp->no_dof, UNIT_NODES);
-        ep->rp->stress    = MatrixAllocIndirect("stress", DOUBLE_ARRAY,9,iNO_INTEG_pts);
-        ep->rp->strain_pl = MatrixAllocIndirect("strain_pl",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+        ep->rp->displ     = MatrixAllocIndirect("displ",    DOUBLE_ARRAY, frp->no_dof, UNIT_NODES);
+        ep->rp->stress    = MatrixAllocIndirect("stress",   DOUBLE_ARRAY, 9, iNO_INTEG_pts );
+        ep->rp->strain_pl = MatrixAllocIndirect("strain_pl",DOUBLE_ARRAY, 9, iNO_INTEG_pts );
         ep->rp->strain_pl_incr     = MatrixAllocIndirect("strain_pl_incr",DOUBLE_ARRAY,9,iNO_INTEG_pts);
         ep->rp->effect_pl_strain   = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
         ep->rp->eff_pl_strain_incr = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
@@ -358,7 +371,8 @@ int iThicknessIntegPts;
     }
 
    /* In the following: 10 is arbitrary and is subjected to change*/
-    for(i=1; i <= UNIT_RIGIDS;i++) {
+
+   for(i=1; i <= UNIT_RIGIDS;i++) {
         rig                  = &frp->rigid[i-1];
         rig->rbody_attr_name = (char *) NULL;
         rig->in              = (int *) MyCalloc(10, sizeof(int)); 
@@ -369,8 +383,9 @@ int iThicknessIntegPts;
            for(j = 1; j <= 10; j++) 
               rig->prop[j-1].dimen = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
         }
-    }
-    for(i=1; i <= UNIT_ELEMENTS; i++) {
+   }
+
+   for(i=1; i <= UNIT_ELEMENTS; i++) {
         elsp                       = &frp->eforces[i-1];
         elsp->no_loads_faces       = 1;                        
         elsp->face_direc           = (double *) MyCalloc(frp->no_dimen, sizeof(double));

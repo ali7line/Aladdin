@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *      vector_double.c : Vector operations for data type double
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  vector_double.c : Vector operations for data type double
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,17 +20,17 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: M.A. Austin                                             July 1993
+ *  Written by: M.A. Austin                                  July 1993 - May 1997
  *  ============================================================================= 
  */
 
 /* #define DEBUG */
 
 #include <stdio.h>
+#include "defs.h"
 #include "units.h"
 #include "matrix.h"
 #include "vector.h"
-#include "defs.h"
 
 /*
  *  =================================================================
@@ -124,7 +125,7 @@ int i;
 
        v3 = VectorAlloc((char *) NULL, DOUBLE_ARRAY, v2->iLength);
        for(i = 1; i <= v2->iLength; i++)
-           v3->uVector.da[i] = v1->uVector.da[i] + v2->uVector.da[i];
+           v3->uVector.da[i-1] = v1->uVector.da[i-1] + v2->uVector.da[i-1];
 
        return(v3);
 }
@@ -143,7 +144,7 @@ int i;
     /* [a] : Check Dimensions of Vector */
 
        if(v1->iLength != v2->iLength) {
-          printf("FATAL ERROR >> Execution halted in VectorAdd()\n");
+          printf("FATAL ERROR >> Execution halted in VectorSub()\n");
           printf("FATAL ERROR >> Problem : v1->iLength = %4d\n", v1->iLength);
           printf("FATAL ERROR >> Problem : v2->iLength = %4d\n", v2->iLength);
           FatalError("Inconsistent Dimensions",(char *)NULL);
@@ -153,7 +154,7 @@ int i;
 
        v3 = VectorAlloc((char *) NULL, DOUBLE_ARRAY, v2->iLength);
        for(i = 1; i <= v2->iLength; i++)
-           v3->uVector.da[i] = v1->uVector.da[i] - v2->uVector.da[i];
+           v3->uVector.da[i-1] = v1->uVector.da[i-1] - v2->uVector.da[i-1];
 
        return(v3);
 }

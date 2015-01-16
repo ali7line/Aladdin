@@ -1,15 +1,17 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *       elmt_frame2d.c : Two-dimensional Beam-Column Element
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  elmt_frame2d.c : Two-dimensional Beam-Column Element
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
- *  and to redistribute it freely, subject to the following restrictions:
+ *  Permission is granted to use this software for any purpose, and on any
+ *  computer system, and to redistribute it freely, subject to the following
+ *  restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
  *     this software, even if they arise from defects in the software.
@@ -29,7 +31,7 @@
  *             +ve AF    -  Tension(LHS outwards)
  *  -------------------------------------------------------------------
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -42,42 +44,47 @@
 #include "fe_functions.h"
 #include "elmt.h"
 
-/*
-#define DEBUG 
-*/
+/* #define DEBUG */
 
-
-/* ============================================================== */
-/*   Element FRAME-2D                                             */
-/*   2D   Frame Element: Beam_Col Elmt                            */
-/*        Frame element :   material properties array             */
-/*        Input Properties:                                       */
-/* ============================================================== */
-/*    p->work_material[0] = E;
-      p->work_material[1] = G;
-      p->work_material[2] = fy;
-      p->work_material[3] = ET;
-      p->work_material[4] = nu;
-      p->work_material[5] = density;
-      p->work_material[6] = fu;
+/* 
+ *  ============================================================== 
+ *  Element FRAME-2D                                            
+ *  2D   Frame Element: Beam_Col Elmt                           
+ *       Frame element :   material properties array            
+ *
+ *  Input Properties:                                      
+ *
+ *       p->work_material[0] = E;
+ *       p->work_material[1] = G;
+ *       p->work_material[2] = fy;
+ *       p->work_material[3] = ET;
+ *       p->work_material[4] = nu;
+ *       p->work_material[5] = density;
+ *       p->work_material[6] = fu;
+ *
+ *       p->work_section[0] = Ixx;
+ *       p->work_section[1] = Iyy;
+ *       p->work_section[2] = Izz;
+ *       p->work_section[3] = Ixy;
+ *       p->work_section[4] = Ixz;
+ *       p->work_section[5] = Iyz;
+ *       p->work_section[6] = weight;
+ *       p->work_section[7] = bf;
+ *       p->work_section[8] = tf;
+ *       p->work_section[9] = depth;                                  
+ *       p->work_section[10] = area;
+ *       p->work_section[11] = plate_thickness;
+ *       p->work_section[12] = J;
+ *       p->work_section[13] = rT;
+ *       p->work_section[14] = width;
+ *       p->work_section[15] = tw;                                  
+ * 
+ *  Input  :  ARRAY *p  -- pointer to working ARRAY data structure
+ *         :  int isw   -- flag for task to be computed.
+ *  Output :  ARRAY *p  -- pointer to working ARRAY data structure
+ *  ============================================================== 
+ */
 
-      p->work_section[0] = Ixx;
-      p->work_section[1] = Iyy;
-      p->work_section[2] = Izz;
-      p->work_section[3] = Ixy;
-      p->work_section[4] = Ixz;
-      p->work_section[5] = Iyz;
-      p->work_section[6] = weight;
-      p->work_section[7] = bf;
-      p->work_section[8] = tf;
-      p->work_section[9] = depth;                                  
-      p->work_section[10] = area;
-      p->work_section[11] = plate_thickness;
-      p->work_section[12] = J;
-      p->work_section[13] = rT;
-      p->work_section[14] = width;
-      p->work_section[15] = tw;                                   */
-/* ============================================================== */
 
 #ifdef __STDC__
 ARRAY *elmt_frame_2d(ARRAY *p, int isw)
@@ -97,21 +104,17 @@ double  eplas , alp, sig;
 int NS_Sub_Incr;
 DIMENSIONS *dp_length, *dp_force, *dp_moment;
 DIMENSIONS *dp_stress, *dp_degree, *dp_temperature;
+ARRAY * sld07( ARRAY *, int );
 
 double sum, temp;
 int    i, j, k, ii;
 int    UNITS_SWITCH;
 
-#ifdef DEBUG
-       printf("*** Enter elmt_frame_2d() : isw = %4d\n", isw);
-#endif
+    /* [a] : Jump to task case */
 
     UNITS_SWITCH = CheckUnits();
-
     switch(isw) {
-        case PROPTY:
-             /* beam element :   material properties  */
-
+        case PROPTY: /* beam element :   material properties  */
              E.value       =  p->work_material[0].value;
              fy.value      =  p->work_material[2].value;
              ET.value      =  p->work_material[3].value;
@@ -124,23 +127,23 @@ int    UNITS_SWITCH;
                  density.dimen =  p->work_material[5].dimen;
              }
 
-           /* (1)   check  poi_ratio value */
+             /* [a] : check  poi_ratio value */
 
-            if( nu == 0.0 || nu > 0.5 ) {
-                printf("WARNING >> ... In 2d beam element() - frame_2d -  nu value = %9.4f,reset to 0.3 !\n",
-                       nu);
-                nu = 0.3;    /* default poi_ratio value */
-            }
+             if( nu == 0.0 || nu > 0.5 ) {
+                 printf("WARNING >> ... In 2d frame elmt () \n");
+                 printf("WARNING >> ... nu value = %9.4f,reset to 0.3 !\n", nu);
+                 nu = 0.3;    /* default poi_ratio value */
+             }
 
-            /* (2)   calculate  G value */
+             /* [b] : calculate  G value */
             
-            G.value = p->work_material[1].value = E.value/(1.0 - 2.0*nu) ;
-            if( UNITS_SWITCH == ON )  G.dimen = E.dimen;
+             G.value = p->work_material[1].value = E.value/(1.0 - 2.0*nu) ;
+             if( UNITS_SWITCH == ON )  G.dimen = E.dimen;
 
-            if(E.value/((1.0 - 2.0*nu)) != p->work_material[1].value) {
-                    printf(" elmt_frame_2d(): WARNING: G is not equal to E/(1-2nu), check G for homogeneous material \n");
-                    printf("                : ignore this message for non-homogeneous materials \n");
-            }
+             if(E.value/((1.0 - 2.0*nu)) != p->work_material[1].value) {
+                 printf("WARNING >> G is not equal to E/(1-2nu), check G for homogeneous material \n");
+                 printf("WARNING >> Ignore this message for non-homogeneous materials \n");
+             }
 
              Ixx    = p->work_section[0].value;
              Iyy    = p->work_section[1].value;
@@ -159,10 +162,6 @@ int    UNITS_SWITCH;
 
              break;
         case CHERROR:
-             break;
-        case STRESS_LOAD:
-             break;
-        case STRESS_UPDATE:
              break;
 	case PRESSLD:
              break;
@@ -230,21 +229,23 @@ int    UNITS_SWITCH;
              /* Assign force values */
 
              if( UNITS_SWITCH == ON ) {
-                if(UNITS_TYPE == SI) {
+                if( CheckUnitsType() == SI) {
                     dp_length = DefaultUnits("m");
                     dp_force  = DefaultUnits("N");
                 }
-                else if(UNITS_TYPE == US) {
+                else if( CheckUnitsType() == US) {
                     dp_length = DefaultUnits("in");
                     dp_force  = DefaultUnits("lbf");
                 }
             
                 /* node no 1 */
+
                 UnitsCopy( p->nodal_loads[0].dimen, dp_force );
                 UnitsCopy( p->nodal_loads[1].dimen, dp_force );
                 UnitsMultRep( p->nodal_loads[2].dimen, dp_force, dp_length );
 
                 /* node no = 2 */
+
                 UnitsCopy( p->nodal_loads[3].dimen, p->nodal_loads[0].dimen );
                 UnitsCopy( p->nodal_loads[4].dimen, p->nodal_loads[1].dimen );
                 UnitsCopy( p->nodal_loads[5].dimen, p->nodal_loads[2].dimen );
@@ -266,40 +267,46 @@ int    UNITS_SWITCH;
                 p->nodal_loads[5].value = mz2; 
              }
 
-             if(isw == STRESS && PRINT_STRESS == ON) {
-                printf("\n");
-                printf("Elmt No %3d : \n", p->elmt_no);
+             /* Print nodal forces to screen */
+
+             if( isw == STRESS ) {
                 if( UNITS_SWITCH == ON ) {
-                    printf("Coords (X,Y) = (%10.3f %s, %10.3f %s)\n", 
-                        xx/dp_length->scale_factor,dp_length->units_name,
-                        yy/dp_length->scale_factor,dp_length->units_name);
-
-                    printf("exx = %13.5e , curva = %13.5g , gamma = %13.5e\n", eps,chi, gam);
                     printf("\n");
+                    printf("Element No %d\n", p->elmt_no);
+                    printf("=====================================================================\n");
+                    printf("  Nodal         x         y            Fx            Fy            Mz\n");
+                    printf("  Point    %6s    %6s        %6s        %6s        %6s\n",
+                           dp_length->units_name, dp_length->units_name,
+                           p->nodal_loads[0].dimen->units_name,
+                           p->nodal_loads[1].dimen->units_name,
+                           p->nodal_loads[2].dimen->units_name);
+                    printf("=====================================================================\n");
 
-                    /* node i */
-                    printf(" Fx1 = %13.5e %s  Fy1 = %13.5e %s  Mz1 = %13.5e %s\n",
+                    /* node 1 */
+
+                    printf("%7d %9.3f %9.3f %13.5e %13.5e %13.5e\n",
+                        1, p->coord[0][0].value, p->coord[1][0].value,
                         p->nodal_loads[0].value/p->nodal_loads[0].dimen->scale_factor,
-                        p->nodal_loads[0].dimen->units_name,
                         p->nodal_loads[1].value/p->nodal_loads[1].dimen->scale_factor,
-                        p->nodal_loads[1].dimen->units_name,
-                        p->nodal_loads[2].value/p->nodal_loads[2].dimen->scale_factor,
-                        p->nodal_loads[2].dimen->units_name);
+                        p->nodal_loads[2].value/p->nodal_loads[2].dimen->scale_factor
+                    );
 
-                    /* node j */
-                    printf(" Fx2 = %13.5e %s  Fy2 = %13.5e %s  Mz2 = %13.5e %s\n",
+                    /* node 2 */
+
+                    printf("%7d %9.3f %9.3f %13.5e %13.5e %13.5e\n",
+                        2, p->coord[0][1].value, p->coord[1][1].value,
                         p->nodal_loads[3].value/p->nodal_loads[3].dimen->scale_factor,
-                        p->nodal_loads[3].dimen->units_name,
                         p->nodal_loads[4].value/p->nodal_loads[4].dimen->scale_factor,
-                        p->nodal_loads[4].dimen->units_name,
-                        p->nodal_loads[5].value/p->nodal_loads[5].dimen->scale_factor,
-                        p->nodal_loads[5].dimen->units_name);
-                        printf("\n");
+                        p->nodal_loads[5].value/p->nodal_loads[5].dimen->scale_factor
+                    );
+
                     /* Member Forces */
-                    printf(" Axial Force : x-direction = %13.5e %s\n",
+
+                    printf("\n");
+                    printf("      Axial Force : x-direction = %13.5e %s\n",
                         -p->nodal_loads[0].value/p->nodal_loads[0].dimen->scale_factor,
                          p->nodal_loads[0].dimen->units_name);
-                    printf(" Shear Force : y-direction = %13.5e %s\n",
+                    printf("      Shear Force : y-direction = %13.5e %s\n",
                          p->nodal_loads[1].value/p->nodal_loads[1].dimen->scale_factor,
                          p->nodal_loads[1].dimen->units_name);
                     printf("\n");
@@ -309,32 +316,167 @@ int    UNITS_SWITCH;
                     free((char *) dp_force->units_name);
                     free((char *) dp_force);
                 } else {
-                    printf("Coords (X,Y) = (%10.3f , %10.3f )\n", xx, yy);
-                    printf("exx = %13.5e , curva = %13.5g , gamma = %13.5e\n", eps,chi, gam);
                     printf("\n");
+                    printf("Element No %d\n", p->elmt_no);
+                    printf("=====================================================================\n");
+                    printf("   Node         x         y            Fx            Fy            Mz\n");
+                    printf("=====================================================================\n");
 
-                    /* node i */
-                    printf(" Fx1 = %13.5e   Fy1 = %13.5e   Mz1 = %13.5e \n",
-                        p->nodal_loads[0].value, 
-                        p->nodal_loads[1].value, 
-                        p->nodal_loads[2].value);
-                    /* node j */
-                    printf(" Fx2 = %13.5e   Fy2 = %13.5e   Mz2 = %13.5e \n",
-                        p->nodal_loads[3].value,
-                        p->nodal_loads[4].value,
-                        p->nodal_loads[5].value);
-                    printf("\n");
+                    /* Node 1 */
+
+                    printf("%7d %9.3f %9.3f %13.5e %13.5e %13.5e\n",
+                        1, p->coord[0][0].value, p->coord[1][0].value,
+                           p->nodal_loads[0].value,
+                           p->nodal_loads[1].value,
+                           p->nodal_loads[2].value);
+
+                    /* Node 2 */
+
+                    printf("%7d %9.3f %9.3f %13.5e %13.5e %13.5e\n",
+                        2, p->coord[0][1].value, p->coord[1][1].value,
+                           p->nodal_loads[3].value,
+                           p->nodal_loads[4].value,
+                           p->nodal_loads[5].value);
+
                     /* Member Forces */
-                    printf(" Axial Force : x-direction = %13.5e \n", -p->nodal_loads[0].value);
-                    printf(" Shear Force : y-direction = %13.5e \n",  p->nodal_loads[1].value);
+
+                    printf("\n");
+                    printf("      Axial Force : x-direction = %13.5e %s\n",
+                        -p->nodal_loads[0].value );
+                    printf("      Shear Force : y-direction = %13.5e %s\n",
+                         p->nodal_loads[1].value );
                     printf("\n");
                 }
              }
              break;
+        case STRESS_MATRIX:
+
+             cs = p->coord[0][1].value - p->coord[0][0].value;
+             sn = p->coord[1][1].value - p->coord[1][0].value;
+
+             xl = sqrt(cs * cs + sn * sn);
+             cs = cs/xl; 
+             sn = sn/xl;
+             p->length.value = xl;
+
+             xx  = 0.5*(p->coord[0][0].value + p->coord[0][1].value);            /* xx = 0.5(x1+x2) */
+             yy  = 0.5*(p->coord[1][0].value + p->coord[1][1].value);            /* yy = 0.5(y1+y2) */
+             eps = (cs*(p->displ->uMatrix.daa[0][1] - p->displ->uMatrix.daa[0][0])
+                    +sn*(p->displ->uMatrix.daa[1][1] - p->displ->uMatrix.daa[1][0])) / xl;
+
+                    /* eps = (u2-u1)cos(phi)+(v2-v1)sin(phi) */
+
+             chi = (p->displ->uMatrix.daa[2][1] - p->displ->uMatrix.daa[2][0]) / xl;
+             gam = -12 *(-sn*(p->displ->uMatrix.daa[0][0] - p->displ->uMatrix.daa[0][1])
+                   + cs*(p->displ->uMatrix.daa[1][0]- p->displ->uMatrix.daa[1][1]))
+                   / (xl*xl*xl)-6.*(p->displ->uMatrix.daa[2][0] + p->displ->uMatrix.daa[2][1])/xl/xl;
+
+             /* local deflections */
+
+             vl1 = -sn * p->displ->uMatrix.daa[0][0] + cs * p->displ->uMatrix.daa[1][0];
+             vl2 = -sn * p->displ->uMatrix.daa[0][1] + cs * p->displ->uMatrix.daa[1][1];
+             tl1 = p->displ->uMatrix.daa[2][0];
+             tl2 = p->displ->uMatrix.daa[2][1];
+
+             /* computer axial forces fx, transverse forces fy, and moment mz */
+
+             e6 = 6* EIzz /xl/xl;
+             e2 = 2* EIzz /xl;
+
+             /* Elasto_Plastic load case                            */
+             /* Considering uniaxial element with x_displ, Fx force */
+
+             fx1 = - EA * eps;
+             fy1 = 2*e6/xl*(vl1-vl2) + e6*(tl1 + tl2);
+             fx2 = - fx1;
+             fy2 = - fy1;
+             mz1 = e6 * ( vl1 - vl2) + e2 * ( 2 * tl1 + tl2 );
+             mz2 = e6 * ( vl1 - vl2) + e2 * (     tl1 + 2 * tl2 );
+             mzc = (mz1 - mz2)/2;
+
+             /* Add FEF if elmt loaded */
+ 
+             if( p->elmt_load_ptr != NULL) { 
+                 p = sld07(p, STRESS);
+
+                 /* Add FEF to joint forces */
+
+                 fx1 = fx1  - p->nodal_loads[0].value;
+                 fy1 = fy1  - p->nodal_loads[1].value;
+                 mz1 = mz1  - p->nodal_loads[2].value;
+                 fx2 = fx2  - p->nodal_loads[3].value;
+                 fy2 = fy2  - p->nodal_loads[4].value;
+                 mz2 = mz2  - p->nodal_loads[5].value;
+             } 
+
+             /* Assign force values */
+
+             if( UNITS_SWITCH == ON ) {
+                if( CheckUnitsType() == SI) {
+                    dp_length = DefaultUnits("m");
+                    dp_force  = DefaultUnits("N");
+                }
+                else if( CheckUnitsType() == US) {
+                    dp_length = DefaultUnits("in");
+                    dp_force  = DefaultUnits("lbf");
+                }
+            
+                /* node no 1 */
+
+                UnitsCopy( p->nodal_loads[0].dimen, dp_force );
+                UnitsCopy( p->nodal_loads[1].dimen, dp_force );
+                UnitsMultRep( p->nodal_loads[2].dimen, dp_force, dp_length );
+
+                /* node no = 2 */
+
+                UnitsCopy( p->nodal_loads[3].dimen, p->nodal_loads[0].dimen );
+                UnitsCopy( p->nodal_loads[4].dimen, p->nodal_loads[1].dimen );
+                UnitsCopy( p->nodal_loads[5].dimen, p->nodal_loads[2].dimen );
+             }
+
+             p->nodal_loads[0].value = fx1; 
+             p->nodal_loads[1].value = fy1; 
+             p->nodal_loads[2].value = mz1;
+             p->nodal_loads[3].value = fx2; 
+             p->nodal_loads[4].value = fy2; 
+             p->nodal_loads[5].value = mz2; 
+
+             /* Transfer nodal coordinates and forces/stresses to working array */
+             /* Set column buffer units */
+
+             UnitsCopy( &(p->stress->spColUnits[0]), dp_length ); 
+             UnitsCopy( &(p->stress->spColUnits[1]), dp_length ); 
+             UnitsCopy( &(p->stress->spColUnits[2]), dp_force ); 
+             UnitsCopy( &(p->stress->spColUnits[3]), dp_force ); 
+             UnitsMultRep( &(p->stress->spColUnits[4]), dp_force, dp_length );
+
+             /* Zero out row buffer units */
+
+             ZeroUnits( &(p->stress->spRowUnits[0]) );
+             ZeroUnits( &(p->stress->spRowUnits[1]) );
+
+             /* Transfer coordinates to working stress matrix */
+
+             p->stress->uMatrix.daa[0][0] = p->coord[0][0].value;
+             p->stress->uMatrix.daa[0][1] = p->coord[1][0].value;
+
+             p->stress->uMatrix.daa[1][0] = p->coord[0][1].value;
+             p->stress->uMatrix.daa[1][1] = p->coord[1][1].value;
+
+             /* Transfer internal loads to working stress matrix */
+
+             p->stress->uMatrix.daa[0][2] = p->nodal_loads[0].value;
+             p->stress->uMatrix.daa[0][3] = p->nodal_loads[1].value;
+             p->stress->uMatrix.daa[0][4] = p->nodal_loads[2].value;
+             p->stress->uMatrix.daa[1][2] = p->nodal_loads[3].value;
+             p->stress->uMatrix.daa[1][3] = p->nodal_loads[4].value;
+             p->stress->uMatrix.daa[1][4] = p->nodal_loads[5].value;
+
+             break;
         case STIFF: /* form element stiffness */
 
 #ifdef DEBUG
-       printf("*** In elmt_frame_2d() : start case STIFF\n", isw);
+       printf("*** elmt_frame2d() : Start STIFF \n");
 #endif
 
              cs = p->coord[0][1].value - p->coord[0][0].value;
@@ -345,47 +487,18 @@ int    UNITS_SWITCH;
              p->length.value = xl;
 
              if( UNITS_SWITCH==ON )
-                  p->stiff->spColUnits[0].units_type = UNITS_TYPE;
+                 p->stiff->spColUnits[0].units_type = CheckUnitsType();
 
              if(p->nodes_per_elmt == 2) /* elastic elment use 2-node elmt */
                 p->stiff = beamst(p, p->stiff, EA, EIzz, xl, cs, sn,
                                   p->size_of_stiff, p->dof_per_node);
 
 #ifdef DEBUG
-      for(i = 1; i <= p->size_of_stiff; i++) {
-         sum = 0.0;
-         temp = 0.0;
-         for(j = 1; j <= p->dof_per_node; j++) {
-            for(k = 1; k <= p->nodes_per_elmt; k++) {
-                ii = p->dof_per_node*(k-1)+j;
-                if(j <= 2)
-                  sum += p->stiff->uMatrix.daa[i-1][ii-1];
-                if(j > 1)
-                  temp += p->stiff->uMatrix.daa[i-1][ii-1];
-            }
-         }
-         printf(" Force[%d] = %lf\n", i, sum);
-         printf(" Moment[%d] = %lf\n", i, temp);
-      }
-#endif
-
-             
-
-#ifdef DEBUG
-       MatrixPrintIndirectDouble(p->stiff);
-       printf("*** In elmt_frame_2d() : end case STIFF\n", isw);
+       printf("*** elmt_frame2d() : Leave STIFF \n");
 #endif
 
              break;
         case MASS_MATRIX:
-
-#ifdef DEBUG
-       printf("*** In elmt_frame_2d() : start case MASS\n", isw);
-       printf("                : EA      = %8.2f\n", EA);
-       printf("                : EI      = %8.2f\n", EIzz);
-       printf("                : Density = %8.2f\n", p->work_material[5].value);
-#endif
-
 
              cs = p->coord[0][1].value - p->coord[0][0].value;
              sn = p->coord[1][1].value - p->coord[1][0].value;
@@ -394,48 +507,55 @@ int    UNITS_SWITCH;
              sn = sn/xl;
              p->length.value = xl;
 
-        /* Calculate mass = m_bar = mass/length                   */
-        /* in units of (kg/m) or ((lbf-sec^2/in)/in)=(lb/in)      */
-        /* if no units, then assume gravity g = 9.80665 m/sec^2   */
+             /* Calculate mass = m_bar = mass/length                   */
+             /* in units of (kg/m) or ((lbf-sec^2/in)/in)=(lb/in)      */
+             /* if no units, then assume gravity g = 9.80665 m/sec^2   */
 
              if( weight != 0.0 )
                mass = weight/9.80665;
              else
                if( density.value > 0 )  mass = A * density.value ;
              else {
-                  printf("\nError in input: Need density value to calculate mass matrix\n");
+                  printf("ERROR >> In input file \n");
+                  printf("ERROR >> You need a density value to calculate mass matrix\n");
                   exit(1);
              }
 
              if( UNITS_SWITCH == ON ) 
-                p->stiff->spColUnits[0].units_type = UNITS_TYPE;
+                p->stiff->spColUnits[0].units_type = CheckUnitsType();
 
              p->stiff = beamms(p, p->stiff, p->type, mass, xl, cs, sn,
                                p->size_of_stiff, p->dof_per_node);
-
-#ifdef DEBUG
-       printf("mass\n");
-       MatrixPrintIndirectDouble( p->stiff);
-       printf("*** In elmt_frame_2d() : end case MASS\n", isw);
-#endif
              break;
         default:
              break;
     }
-#ifdef DEBUG
-       printf("*** leaving elmt_frame_2d() \n");
-#endif
 
     return(p);
 }
 
 
-/* ==================== */
-/* Beam Stiffness       */
-/* ==================== */
+/* 
+ *  ======================================================================
+ *  beamst() : Compute beam stiffness matrix. Each element has two nodes,
+ *             each having two translational and one rotation d.o.f.
+ * 
+ *  Input  : ARRAY  *p         -- working data structure ARRAY.
+ *         : MATRIX *s         -- pointer to stiffness matrix.
+ *         : double EA         -- rigidity in axial direction.
+ *         : double EI         -- fexuraly rigidity.
+ *         : double length     -- length of the element.
+ *         : double cs         -- cosine of the element orientation.
+ *         : double sn         -- sine of the element orientation.
+ *         : int size_of_stiff -- size of the stiffness matrix.
+ *         : int no_dof        -- 
+ *  Output : MATRIX *          -- pointer to stiffness matrix.
+ *  ======================================================================
+ */ 
 
 #ifdef __STDC__
-MATRIX *beamst(ARRAY *p, MATRIX *s, double EA, double EI, double length, double cs, double sn, int size_of_stiff, int no_dof)
+MATRIX *beamst(ARRAY *p, MATRIX *s, double EA, double EI, double length,
+               double cs, double sn, int size_of_stiff, int no_dof)
 #else
 MATRIX *beamst(p, s, EA, EI, length, cs, sn, size_of_stiff, no_dof)
 ARRAY  *p;
@@ -448,20 +568,15 @@ int             i, j, k;
 int    length1, length2;
 double                t;
 DIMENSIONS     *d1, *d2;
+DIMENSIONS     *d3, *d4;
 
-/***********************************************/
-/* Elastic Stiffness Matrix with two node at   */
-/* each element                                */
-/***********************************************/
+    /* [a] : initialize working variables */
+
     i = no_dof + 1;
     j = no_dof + 2; 
     k = no_dof + 3;
 
-#ifdef DEBUG
- printf(" in beamst(): EA = %lf length = %lf \n", EA, length);
- printf(" in beamst(): EI = %lf cs= %lf sn = %lf \n", EI, cs, sn);
-#endif
-
+    /* [b] : fill-in element of the stiffness matrix */
 
     t = EA/length; 
  
@@ -488,58 +603,82 @@ DIMENSIONS     *d1, *d2;
     s->uMatrix.daa[2][j-1] = s->uMatrix.daa[j-1][2]     = -t;
     s->uMatrix.daa[j-1][k-1] = s->uMatrix.daa[k-1][j-1] = -t;
 
-    /* ==================== */
-    /* units buffer         */
-    /* ==================== */
+    /* [c] : fill-in the units buffer */
 
     if( CheckUnits() == ON ) {
-       if(UNITS_TYPE == SI) {
-          d1 = DefaultUnits("Pa");
-          d2 = DefaultUnits("m");
+       if( CheckUnitsType() == SI) {
+           d1 = DefaultUnits("Pa");
+           d2 = DefaultUnits("m");
+           d3 = DefaultUnits("N");
+           d4 = DefaultUnits("rad");
        }
        else {
-          d1 = DefaultUnits("psi");
-          d2 = DefaultUnits("in");
+           d1 = DefaultUnits("psi");
+           d2 = DefaultUnits("in");
+           d3 = DefaultUnits("lbf");
+           d4 = DefaultUnits("rad");
        }
+
+       /* Column buffer units */
 
        UnitsMultRep( &(s->spColUnits[0]), d1, d2 );
        UnitsCopy( &(s->spColUnits[1]), &(s->spColUnits[0]) );
-       UnitsMultRep( &(s->spColUnits[2]), &(s->spColUnits[0]), d2 );
-
-       ZeroUnits( &(s->spRowUnits[0]) );
-       ZeroUnits( &(s->spRowUnits[1]) );
-       UnitsCopy( &(s->spRowUnits[2]), d2 ); 
+       UnitsDivRep( &(s->spColUnits[2]), d3, d4, NO );
 
        UnitsCopy( &(s->spColUnits[3]), &(s->spColUnits[0]) ); 
        UnitsCopy( &(s->spColUnits[4]), &(s->spColUnits[1]) ); 
        UnitsCopy( &(s->spColUnits[5]), &(s->spColUnits[2]) ); 
 
+       /* Row buffer units */
+
+       ZeroUnits( &(s->spRowUnits[0]) );
+       ZeroUnits( &(s->spRowUnits[1]) );
+       UnitsCopy( &(s->spRowUnits[2]), d2 ); 
+
        UnitsCopy( &(s->spRowUnits[3]), &(s->spRowUnits[0]) ); 
        UnitsCopy( &(s->spRowUnits[4]), &(s->spRowUnits[1]) ); 
        UnitsCopy( &(s->spRowUnits[5]), &(s->spRowUnits[2]) ); 
+
+       /* Free working memory */
 
        free((char *) d1->units_name);
        free((char *) d1);
        free((char *) d2->units_name);
        free((char *) d2);
+       free((char *) d3->units_name);
+       free((char *) d3);
+       free((char *) d4->units_name);
+       free((char *) d4);
     }
+
+    /* [d] : rotate element to global coordinate system */
 
     s->uMatrix.daa = (double **) rotate(s->uMatrix.daa, cs, sn, size_of_stiff, no_dof);
 
-#ifdef DEBUG
-  printf("flag: in beamst() : STIFF after rotation \n");
-  MatrixPrintIndirectDouble( s );
-#endif
     return(s);
-
 }
+
 
-/* =================== */
-/* Beam Mass Matrix    */
-/* =================== */
+/*
+ *  ======================================================================
+ *  beamms () : compute mass matrix for beam.
+ *
+ *  Input  : ARRAY  *p         -- working data structure ARRAY.
+ *         : MATRIX *s         -- pointer to stiffness matrix.
+ *         : int  mtype        -- mass matrix type (lumped or consistent).
+ *         : double mass       -- lumped nodal mass.
+ *         : double xl         -- length of the element.
+ *         : double cs         -- cosine of the element orientation.
+ *         : double sn         -- sine of the element orientation.
+ *         : int nst           -- 
+ *         : int ndf           -- 
+ *  Output : MATRIX *          -- pointer to stiffness matrix.
+ *  ======================================================================
+ */
 
 #ifdef __STDC__
-MATRIX *beamms(ARRAY *p, MATRIX *s, int mtype, double mass, double xl, double cs, double sn, int nst, int ndf)
+MATRIX *beamms(ARRAY *p, MATRIX *s, int mtype, double mass,
+               double xl, double cs, double sn, int nst, int ndf)
 #else
 MATRIX *beamms(p, s, mtype, mass, xl, cs, sn, nst, ndf)
 ARRAY  *p;
@@ -554,10 +693,7 @@ double  t, s1, s2, s3, dv;
 double sg[5], ag[5], ba[3], rba[3], bb[5], rbb[5];
 DIMENSIONS  *d1, *d2, *d3;
 
-#ifdef DEBUG
-       printf("*** Enter beamms() : matrix type = %10d  \n", mtype);
-       printf("                   : t           = %10.3e\n", (mass * xl/2));
-#endif
+    /* [a] : Assemble lumped and consistent mass matrices */
 
     t = mass * xl/2;
     switch(mtype) {
@@ -620,18 +756,16 @@ DIMENSIONS  *d1, *d2, *d3;
 	     break;
     }
 
-    /* ==================== */
-    /* Initial units buffer */
-    /* ==================== */
+    /* [b] : Setup units buffers for mass matrix */
 
     if( CheckUnits() == ON ) {
-       if(UNITS_TYPE == SI) {
-          d1 = DefaultUnits("Pa");
-          d2 = DefaultUnits("m");
+       if( CheckUnitsType() == SI) {
+           d1 = DefaultUnits("Pa");
+           d2 = DefaultUnits("m");
        }
        else {
-          d1 = DefaultUnits("psi");
-          d2 = DefaultUnits("in");
+           d1 = DefaultUnits("psi");
+           d2 = DefaultUnits("in");
        }
        d3 = DefaultUnits("sec");
 
@@ -659,23 +793,26 @@ DIMENSIONS  *d1, *d2, *d3;
        free((char *) d3);
     }
 
-    /* ==================== */
-    /* Rotate mass matrix   */
-    /* ==================== */
+    /* [c] : rotate mass matrix to frame coordinate scheme */
 
     s->uMatrix.daa = (double **) rotate(s->uMatrix.daa,cs,sn,nst,ndf);
 
-#ifdef DEBUG
-       MatrixPrint(s);
-       printf("*** leaving beamms()  \n");
-#endif
-
     return(s);
 }
+
 
-/* ====================== */
-/* Rotate                 */
-/* ====================== */
+/*
+ *  ===============================================================
+ *  rotate () : Rotate element to global coordinate frame
+ *
+ *  Input  : double **s   -- pointer to stiffness/mass matrix.
+ *         : double cs    -- cosine of the element orientation.
+ *         : double sn    -- sine of the element orientation.
+ *         : int nst      -- 
+ *         : int ndf      -- maximum d.o.f. at any node.
+ *  Output : MATRIX *     -- pointer to rotated matrix.
+ *  ===============================================================
+ */
 
 #ifdef __STDC__
 double **rotate(double **s, double cs, double sn, int nst, int ndf)
@@ -689,8 +826,12 @@ double cs, sn;
 int    i,j,n;
 double t;
 
+   /* [a] : Check to see if element orientation is horizontal */
+
    if(cs == 1.0)
       return(s);
+
+   /* [b] : Rotate matrix to global coordinate frame */
 
    for(i = 0; i < nst; i = i + ndf){
        j = i+1;
@@ -714,9 +855,155 @@ double t;
 }
 
 
-/* =================================================== */
-/* Equivalent Loading Procedure for 2 D frame element  */
-/* =================================================== */
+/*
+ *  ===============================================================
+ *  print_property_frame_2d() : print FRAME_2D Element Properties
+ *
+ *  Input  : EFRAME *frp  --
+ *         : int i        -- 
+ *  Output : void 
+ *  ===============================================================
+ */
+
+#ifdef __STDC__
+void print_property_frame_2d(EFRAME *frp, int i)
+#else
+void print_property_frame_2d(frp, i)
+EFRAME    *frp;
+int          i;                 /* elmt_attr_no */
+#endif
+{
+int     UNITS_SWITCH;
+ELEMENT_ATTR    *eap;
+
+#ifdef DEBUG
+       printf("*** Enter print_property_frame_2d()\n");
+#endif
+
+     UNITS_SWITCH = CheckUnits();
+     eap = &frp->eattr[i-1];
+
+     if( PRINT_MAP_DOF == ON ) {
+        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+           printf("             ");
+           printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+        }
+
+        if(frp->no_dof == 6) { /* 3d analysis */
+           printf("             ");
+           printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+           printf("             ");
+           printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
+                           eap->map_ldof_to_gdof[3],
+                           eap->map_ldof_to_gdof[4],
+                           eap->map_ldof_to_gdof[5]);
+        } 
+     }
+
+     switch(UNITS_SWITCH) {
+       case ON:
+        UnitsSimplify( eap->work_material[0].dimen );
+        UnitsSimplify( eap->work_material[2].dimen );
+        UnitsSimplify( eap->work_material[5].dimen );
+        UnitsSimplify( eap->work_section[2].dimen );
+        UnitsSimplify( eap->work_section[10].dimen );
+        if( eap->work_material[0].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e %s\n",
+                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
+                           eap->work_material[0].dimen->units_name);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[2].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e %s\n",
+                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
+                           eap->work_material[2].dimen->units_name);
+        }
+	if( eap->work_material[5].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Density         = %16.3e %s\n",
+                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
+                           eap->work_material[5].dimen->units_name);
+	}
+	if( eap->work_section[2].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Inertia Izz     = %16.3e %s\n",
+                           eap->work_section[2].value/eap->work_section[2].dimen->scale_factor,
+                           eap->work_section[2].dimen->units_name);
+	}
+	if( eap->work_section[10].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Area            = %16.3e %s\n",
+                           eap->work_section[10].value/eap->work_section[10].dimen->scale_factor,
+                           eap->work_section[10].dimen->units_name);
+	}
+       break;
+       case OFF:
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e\n",
+                            eap->work_material[0].value);
+        }
+        if( eap->work_material[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e\n",
+                            eap->work_material[2].value);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Density         = %16.3e\n",
+                            eap->work_material[5].value);
+        }
+        if( eap->work_section[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Inertia Izz     = %16.3e\n",
+                            eap->work_section[2].value);
+        }
+        if( eap->work_section[10].value != 0.0 ) {
+           printf("             ");
+           printf("         : Area            = %16.3e\n",
+                            eap->work_section[10].value);
+        }
+        break;
+        default:
+        break;
+     }
+#ifdef DEBUG
+       printf("*** Leave print_property_frame_2d()\n");
+#endif
+}
+
+
+/* 
+ *  ====================================================================
+ *  sld07() : Compute equivalent nodal loads for 2d frame element
+ * 
+ *  Settings for the task flag are:
+ * 
+ *      task         Action
+ *      ======================================
+ *      PRESSLD      Pressure loading.
+ *      STRESS       Streess  loading.
+ * 
+ *  Input  : ARRAY *  -- pointer to working array data structure.
+ *         : int task -- flag for task to be performed.
+ *  Output : ARRAY *  -- pointer to working array data structure.
+ *  ====================================================================
+ */ 
 
 #ifdef __STDC__
 ARRAY *sld07(ARRAY *p, int task)
@@ -740,13 +1027,13 @@ double  **rmat,**rt;
 int     *da;
 int     inc,j, i;
 
-    /* Initialize total load */
+    /* [a] : Initialize total load */
 
     for(inc=1; inc<=7;inc++)
         load[inc-1] = 0.0;
     MCZT = 0.0;
 
-    switch(task){
+    switch(task) {
         case PRESSLD:
         case STRESS:
              L       = (double) p->length.value;  
@@ -771,8 +1058,10 @@ int     inc,j, i;
              bx =  elp->bx.value;
              by =  elp->by.value;
 
-             if(a > L)
-                printf(">>ERROR in sld; Elmt Load dist. 'a' > Elmt Length; El_no= %d\n",p->elmt_no);  
+             if(a > L) {
+                printf("ERROR >> In sld()\n" );  
+                printf("ERROR >> Elmt Load dist. 'a' > Elmt Length; El_no= %d\n",p->elmt_no);  
+             }
 
              if (elp->type == -1) { /* Distributed loading Condition */
                 inc = 0;
@@ -837,7 +1126,6 @@ SHP_START:
               /* Chapter 6: Space Frame                   */
               /* =========================================*/
 
-
               ze = a/L;      ze2 = ze * ze;        ze3 = ze2 * ze;
 
               f1 =     1  -  ze;
@@ -872,26 +1160,22 @@ SHP_START:
 
             /* Add Contributation to Total Equivalent Load */
 
-               load[0] = load[0] + X1;
-               load[1] = load[1] + Y1;
-               load[2] = load[2] + MZ1;
-               load[3] = load[3] + X2;
-               load[4] = load[4] + Y2;
-               load[5] = load[5] + MZ2;
+            load[0] = load[0] + X1;
+            load[1] = load[1] + Y1;
+            load[2] = load[2] + MZ1;
+            load[3] = load[3] + X2;
+            load[4] = load[4] + Y2;
+            load[5] = load[5] + MZ2;
 	       
                if(task == STRESS)
 	          MCZT = MCZT+ MCZ;
             }
             break;
-       case STRESS_LOAD:
-            for(i = 1; i<= 6; i++)
-            load[i-1] = p->nodal_loads[i-1].value ;
-            break;
        default:
             break;
     }
 
-    /* Rotate Local forces to Global forces */
+    /* [b] : Rotate local forces to global forces */
  
     rmat = (double **) MatrixAllocIndirectDouble(p->size_of_stiff, p->size_of_stiff);
     rmat = (double **) tmat(rmat,4,p);
@@ -906,16 +1190,11 @@ SHP_START:
               p->nodal_loads[inc-1].value += rt[inc-1][j-1]* (double) load[j-1];
          }
     }
-    /* mid pt moment */
-/*
-    if (task == STRESS) {
-        p->nodal_loads[7].value = MCZT; 
-    }
-*/
+
+    /* [c] : Mid point moment */
  
     MatrixFreeIndirectDouble(rmat, p->size_of_stiff);
     MatrixFreeIndirectDouble(rt, p->size_of_stiff);
 
     return(p);
 }
-

@@ -42,61 +42,61 @@ typedef struct {
 
 /* Function Declarations for Standard ANSI C */
 
-extern VECTOR *VectorAlloc( char * , DATA_TYPE , int );
-extern VECTOR *VectorAdd( VECTOR * , VECTOR * );
-extern VECTOR *VectorSub( VECTOR * , VECTOR * );
-extern void    VectorPrint( VECTOR * );
-extern void    VectorFree( VECTOR * );
+VECTOR *VectorAlloc( char * , DATA_TYPE , int );
+VECTOR *VectorAdd( VECTOR * , VECTOR * );
+VECTOR *VectorSub( VECTOR * , VECTOR * );
+void    VectorPrint( VECTOR * );
+void    VectorFree( VECTOR * );
 
-extern void    PrintVectorInteger( VECTOR * );
-extern void    VectorFreeInteger( VECTOR * );
-extern VECTOR *VectorAddInteger( VECTOR * , VECTOR * );
-extern VECTOR *VectorSubInteger( VECTOR * , VECTOR * );
-extern int    *iVectorAlloc( int );
+void    PrintVectorInteger( VECTOR * );
+void    VectorFreeInteger( VECTOR * );
+VECTOR *VectorAddInteger( VECTOR * , VECTOR * );
+VECTOR *VectorSubInteger( VECTOR * , VECTOR * );
+int    *iVectorAlloc( int );
 
-extern void    PrintVectorDouble( VECTOR * );
-extern void    VectorFreeDouble( VECTOR * );
-extern VECTOR *VectorAddDouble( VECTOR *, VECTOR *);
-extern VECTOR *VectorSubDouble( VECTOR *, VECTOR *);
-extern double *dVectorAlloc( int );
+void    PrintVectorDouble( VECTOR * );
+void    VectorFreeDouble( VECTOR * );
+VECTOR *VectorAddDouble( VECTOR *, VECTOR *);
+VECTOR *VectorSubDouble( VECTOR *, VECTOR *);
+double *dVectorAlloc( int );
 
-extern VECTOR *NaiveGaussElimination( MATRIX *, VECTOR *);
-extern VECTOR *GaussElimination( char *, MATRIX *, VECTOR *);
-extern VECTOR *SetupScaleFactors( MATRIX * );
-extern VECTOR *SetupPivotVector( MATRIX * );
+VECTOR *NaiveGaussElimination( MATRIX *, VECTOR *);
+VECTOR *GaussElimination( char *, MATRIX *, VECTOR *);
+VECTOR *SetupScaleFactors( MATRIX * );
+VECTOR *SetupPivotVector( MATRIX * );
 
-extern MATRIX *LUDecompositionIndirect( MATRIX *, VECTOR *);
-extern MATRIX *LUSubstitutionIndirect( char *, VECTOR *, MATRIX *, MATRIX *);
+MATRIX *LUDecompositionIndirect( MATRIX *, VECTOR *);
+MATRIX *LUSubstitutionIndirect( char *, VECTOR *, MATRIX *, MATRIX *);
 
 #else  /* Start case not STDC */
 
 /* Function Declarations for K&R C */
 
-extern VECTOR *VectorAlloc();
-extern VECTOR *VectorAdd();
-extern VECTOR *VectorSub();
-extern void    VectorPrint();
-extern void    VectorFree();
+VECTOR *VectorAlloc();
+VECTOR *VectorAdd();
+VECTOR *VectorSub();
+void    VectorPrint();
+void    VectorFree();
 
-extern void    PrintVectorInteger();
-extern void    VectorFreeInteger();
-extern VECTOR *VectorAddInteger();
-extern VECTOR *VectorSubInteger();
-extern int    *iVectorAlloc();
+void    PrintVectorInteger();
+void    VectorFreeInteger();
+VECTOR *VectorAddInteger();
+VECTOR *VectorSubInteger();
+int    *iVectorAlloc();
 
-extern void    PrintVectorDouble();
-extern void    VectorFreeDouble();
-extern VECTOR *VectorAddDouble();
-extern VECTOR *VectorSubDouble();
-extern double *dVectorAlloc();
+void    PrintVectorDouble();
+void    VectorFreeDouble();
+VECTOR *VectorAddDouble();
+VECTOR *VectorSubDouble();
+double *dVectorAlloc();
 
-extern VECTOR *NaiveGaussElimination();
-extern VECTOR *GaussElimination();
-extern VECTOR *SetupScaleFactors();
-extern VECTOR *SetupPivotVector();
+VECTOR *NaiveGaussElimination();
+VECTOR *GaussElimination();
+VECTOR *SetupScaleFactors();
+VECTOR *SetupPivotVector();
 
-extern MATRIX *LUDecompositionIndirect();
-extern MATRIX  *LUSubstitutionIndirect();
+MATRIX *LUDecompositionIndirect();
+MATRIX  *LUSubstitutionIndirect();
 
 #endif /* End case not STDC */
 

@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *          elmt_psps.c : Plane Stress Plane Strain Element
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  elmt_psps.c : Plane Stress Plane Strain Element
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -31,70 +32,71 @@
 #include "fe_database.h"
 #include "symbol.h"
 #include "fe_functions.h"
+#include "elmt.h"
+
+/* Function Declarations */
+
+double **MaterialMatrixPlane( double, double, double );
 
 /*
-#define DEBUG
-*/
-#define Streq(s1, s2) (strcmp(s1, s2) == 0)
-
-
-/* ============================================================== */
-/*   Element01                                                    */
-/*   2D   Actions on Plane Stress/Plane Strain Element            */
-/*        For Properties, see note below.                         */
-/* ============================================================== */
-
-save_actions_elmt01(ep,p)
-ELEMENT *ep;
-ARRAY    *p;
-{
-   /* ADD DETAILS LATER */
-}
-
-
-/* ================================================ */
-/*   Plane-stress and plane strain Element          */
-/*   elements: PLANE_STRAIN; PLANE_STRESS           */
-/*   Plane Linear Elastic Element                   */
-/* ================================================ */
-/*    p->work_material[0] = E;
-      p->work_material[1] = G;
-      p->work_material[2] = fy;
-      p->work_material[3] = ET;
-      p->work_material[4] = nu;
-      p->work_material[5] = density;
-      p->work_material[6] = fu;
-      p->work_material[7] = alpha_thermal[0];
-      p->work_material[8] = alpha_thermal[1];
-
-      p->work_section[0] = Ixx;
-      p->work_section[1] = Iyy;
-      p->work_section[2] = Izz;
-      p->work_section[3] = Ixy;
-      p->work_section[4] = Ixz;
-      p->work_section[5] = Iyz;
-      p->work_section[6] = weight;
-      p->work_section[7] = bf;
-      p->work_section[8] = tf;
-      p->work_section[9] = depth;
-      p->work_section[10] = area;                                  */
-/* ============================================================== */
-
+ *  ============================================================================ 
+ *  Plane-stress/plane strain finite element         
+ * 
+ *  The material and section properties are: 
+ * 
+ *      p->work_material[0] = E;
+ *      p->work_material[1] = G;
+ *      p->work_material[2] = fy;
+ *      p->work_material[3] = ET;
+ *      p->work_material[4] = nu;
+ *      p->work_material[5] = density;
+ *      p->work_material[6] = fu;
+ *      p->work_material[7] = alpha_thermal[0];
+ *      p->work_material[8] = alpha_thermal[1];
+ *
+ *      p->work_section[0] = Ixx;
+ *      p->work_section[1] = Iyy;
+ *      p->work_section[2] = Izz;
+ *      p->work_section[3] = Ixy;
+ *      p->work_section[4] = Ixz;
+ *      p->work_section[5] = Iyz;
+ *      p->work_section[6] = weight;
+ *      p->work_section[7] = bf;
+ *      p->work_section[8] = tf;
+ *      p->work_section[9] = depth;
+ *      p->work_section[10] = area;                                 
+ * 
+ *  Compute (3x2) derivative matrix [B] .... 
+ * 
+ *       B_i[0][0] = dNi/dx, B_i[0][1] = 0  
+ *       B_i[1][0] = 0,      B_i[1][1] = dNi/dy     
+ *       B_i[2][0] = dNi/dy, B_i[2][2] = dNi/dx   
+ *
+ *       [B] = [B_1, B_2, B_3, B_4, ..., B_n] where n = no of node                             
+ *
+ *       The output is : shp[0][i-1] = dN_i/dx                
+ *                       shp[1][i-1] = dN_i/dy                
+ *       compute [B] matrix at each Gaussian integration point.
+ *
+ *  Note : Material properties such and "E" and "nu" must be stored as static
+ *         variables.
+ *  ============================================================================ 
+ */
 
 ARRAY *elmt_psps(p,isw)
 ARRAY *p;
 int isw;
 {
 static QUANTITY fy, G, E, ET, density, lambda;
-double nu;
-double temperature, *alpha_thermal;
-
-char *elmt_type;
-int no_integ_pts, no_stress_pts;
-int l, k, i, j,j1, k1, lint, kk;
-
+static double nu;
+static double temperature;
+static double *alpha_thermal;
+static double dFlag;
+static int no_integ_pts;
+static int no_stress_pts;
+int ii, k, i, j,j1, k1, lint, kk;
 double sg[17],tg[17],wg[17],sig[7],
-       jacobain,w11,w12,w21,w22, xx, yy, dv, wd[3];
+       jacobian,w11,w12,w21,w22, xx, yy, dv, wd[3];
 double **B_matrix;
 double **B_Transpose;
 double **stiff;
@@ -114,659 +116,757 @@ int          length1, length;
 int             UNITS_SWITCH;
 double         *sum_row, sum;
 DIMENSIONS        *dp_stress;
+DIMENSIONS        *dp_length;
 DIMENSIONS     *d1, *d2, *d3;
 
-#ifdef DEBUG
-       printf("*** enter elmt_psps()\n");
-#endif
+   dof_per_elmt  = p->nodes_per_elmt*p->dof_per_node;  
 
-    UNITS_SWITCH = CheckUnits();
-    dof_per_elmt  = p->nodes_per_elmt*p->dof_per_node;  
+    /* [a] : Allocate memory for matrices */
 
-   /* Allocation for matrices */
+   strain        = MatrixAllocIndirectDouble(3, 1);
+   stress        = MatrixAllocIndirectDouble(3, 1);
+   displ         = MatrixAllocIndirectDouble(dof_per_elmt, 1);
+   stiff         = MatrixAllocIndirectDouble(dof_per_elmt, dof_per_elmt);
+   load          = MatrixAllocIndirectDouble(dof_per_elmt, 1);
+   nodal_load    = MatrixAllocIndirectDouble(dof_per_elmt, 1);
+   B_matrix      = MatrixAllocIndirectDouble(3, dof_per_elmt);
+   shp           = MatrixAllocIndirectDouble(3, p->nodes_per_elmt);
+   sum_row       = dVectorAlloc(dof_per_elmt);
 
-    alpha_thermal = dVectorAlloc(2);
-    strain        = MatrixAllocIndirectDouble(3, 1);
-    stress        = MatrixAllocIndirectDouble(3, 1);
-    displ         = MatrixAllocIndirectDouble(dof_per_elmt, 1);
-    stiff         = MatrixAllocIndirectDouble(dof_per_elmt, dof_per_elmt);
-    load          = MatrixAllocIndirectDouble(dof_per_elmt, 1);
-    nodal_load    = MatrixAllocIndirectDouble(dof_per_elmt, 1);
-    B_matrix      = MatrixAllocIndirectDouble(3, dof_per_elmt);
-    shp           = MatrixAllocIndirectDouble(3, p->nodes_per_elmt);
-    sum_row       = dVectorAlloc(dof_per_elmt);
+   B_Transpose   = MatrixAllocIndirectDouble(dof_per_elmt, 3);
+   temp_matrix   = MatrixAllocIndirectDouble(dof_per_elmt, 3);
+   body_force    = MatrixAllocIndirectDouble(3, 1);
 
-    B_Transpose   = MatrixAllocIndirectDouble(dof_per_elmt, 3);
-    temp_matrix   = MatrixAllocIndirectDouble(dof_per_elmt, 3);
-    body_force    = MatrixAllocIndirectDouble(3, 1);
-/*
-   Mater_matrix  = MatrixAllocIndirectDouble(3, 3);
-   temp_change   = MatrixAllocIndirectDouble(3, 1);
-*/
+   /* [b] : deal with Individual Tasks */
 
+   UNITS_SWITCH = CheckUnits();
+   switch(isw) {
+       case PROPTY: 
+            alpha_thermal = dVectorAlloc(2);
+
+            /* Input material properties */
+
+            lint = 0;
             E.value       =  p->work_material[0].value; 
             fy.value      =  p->work_material[2].value;
             ET.value      =  p->work_material[3].value;
             nu            =  p->work_material[4].value; 
             density.value =  p->work_material[5].value;
-
-            if(UNITS_SWITCH == ON) {
-               E.dimen       =  p->work_material[0].dimen; 
-               fy.dimen      =  p->work_material[2].dimen;
-               ET.dimen      =  p->work_material[3].dimen;
-               density.dimen =  p->work_material[5].dimen;
+            if( UNITS_SWITCH == ON ) {
+                E.dimen       =  p->work_material[0].dimen; 
+                fy.dimen      =  p->work_material[2].dimen;
+                ET.dimen      =  p->work_material[3].dimen;
+                density.dimen =  p->work_material[5].dimen;
             }
 
-            alpha_thermal[0] = p->work_material[7].value; /* thermal expansion coeff. in x-dirct */
-            alpha_thermal[1] = p->work_material[8].value; /* thermal expansion coeff. in y-direc */
+            /* Initialize thermal expansion coefficients in x- and y- directions */
 
-            if(p->nodes_per_elmt == 4) no_integ_pts  =  2;/* 4-node element */
-            if(p->nodes_per_elmt == 8) no_integ_pts  =  3;/* 8-node element */
+            alpha_thermal[0] = p->work_material[7].value; 
+            alpha_thermal[1] = p->work_material[8].value; 
 
-            no_stress_pts = no_integ_pts;                 /* stress points, subject to change later */
+            /* 4-node and 8-node elements */
 
-            elmt_type  = p->elmt_type;          
+            if(p->nodes_per_elmt == 4)
+               no_integ_pts  =  2;
+            if(p->nodes_per_elmt == 8)
+               no_integ_pts  =  3;
 
-            if(Streq("PLANE_STRAIN", elmt_type)) {
-               E.value  = p->work_material[0].value = E.value /(1+nu)/(1-nu);
-               nu = p->work_material[4].value = nu * E.value;
-               G.value  = p->work_material[1].value = E.value/2/(1+nu);
-               for (i = 1; i <= 2; i++)
-               alpha_thermal[i-1]  =  alpha_thermal[i-1]*(1.0 + nu);
+            no_stress_pts = no_integ_pts; /* stress points, subject to change later */
+
+            /* Set flag for Plane Stress/Plane Strain material matrix computations */
+
+            dFlag = 1;
+            if(strcmp("PLANE_STRAIN", p->elmt_type) == 0) {
+               dFlag = 2;
             }
 
-   switch(isw) {
-       case PROPTY:  /* input material properties */
-
-            lint = 0;
             break;
        case CHERROR:
             break;
-       case STIFF:
+       case STIFF: 
 
-#ifdef DEBUG
-       printf("*** in elmt_psps() : start case STIFF \n");
-#endif
+            /* Zero out the Stiffness Matrix */
 
             for(i = 1; i <= dof_per_elmt; i++) 
                 for(j = 1; j<= dof_per_elmt; j++)
                     stiff[i-1][j-1] = 0.0;
 
+            /* Get Gauss Integration points */
+
             if(no_integ_pts*no_integ_pts != lint)
                pgauss(no_integ_pts,&lint,sg,tg,wg);
 
-            /* start gaussian integration  */
+            /* Start Gaussian Integration  */
 
-            for(l = 1; l<= lint; l++) { 
-               shape(sg[l-1],tg[l-1],p->coord,shp,&jacobain,p->no_dimen,p->nodes_per_elmt, p->node_connect,FALSE);
-            /* output:                                    */
-            /*     shp[0][i-1] = dN_i/dx                  */
-            /*     shp[1][i-1] = dN_i/dy                  */
-            /*     compute [B] matrix at each Gaussian    */
-            /*     integration point                      */
+            for(ii = 1; ii <= lint; ii++) { 
 
-            /*****************************************************/
-            /*  Derivative matrix                                */
-            /*     (B_i)3x2; B_i[0][0] = dNi/dx, B_i[0][1] = 0   */
-            /*     B_i[1][0] = 0,      B_i[1][1] = dNi/dy        */
-            /*     B_i[2][0] = dNi/dy, B_i[2][2] = dNi/dx        */
-            /*     [B] = [B_1, B_2, B_3, B_4, ..., B_n]          */
-            /*       n = no of node                              */ 
-            /*****************************************************/
+                /* Compute shape functions */
+
+                shape( sg[ii-1],tg[ii-1], p->coord,shp,&jacobian, p->no_dimen,
+                       p->nodes_per_elmt, p->node_connect,FALSE);
+
+                /*
+                 *  =================================================== 
+                 *  Compute material matrix
+                 *  
+                 *  Plane Stress : 3rd argument ii = 1
+                 *  Plane Strain : 3rd argument ii = 2
+                 *  =================================================== 
+                 */
+
+                Mater_matrix = MaterialMatrixPlane( E.value, nu, dFlag );
+
+                /* Form [B] matrix */
             
-            /* material matrix */
-            Mater_matrix = MATER_MAT_PLANE(E.value, nu);
-
-            /* Form [B] matrix */
-            
-            for(j = 1; j <= p->nodes_per_elmt; j++) { 
-               k = 2*(j-1);
-               B_matrix[0][k]   = shp[0][j-1];
-               B_matrix[1][k+1] = shp[1][j-1];
-               B_matrix[2][k]   = shp[1][j-1];
-               B_matrix[2][k+1] = shp[0][j-1];
-            }
+                for(j = 1; j <= p->nodes_per_elmt; j++) { 
+                    k = 2*(j-1);
+                    B_matrix[0][k]   = shp[0][j-1];
+                    B_matrix[1][k+1] = shp[1][j-1];
+                    B_matrix[2][k]   = shp[1][j-1];
+                    B_matrix[2][k+1] = shp[0][j-1];
+                }
            
-           /* muti. Jacobain determinant with weight coefficents and mater matrix */
+                /* Multiply Jacobian determinant with weight coefficents  */
+                /* and material matrix                                    */
           
-            jacobain = jacobain* wg[l-1];
-
-            for( i = 1; i <=3 ; i++ ) 
-              for (j = 1; j <= 3; j++)  
-                 Mater_matrix[i-1][j-1]  *= jacobain;
-
-           /* Transpose [B] matrix */
-
-            for(i = 1; i <= 3; i++)
-                for(j = 1; j <= dof_per_elmt; j++) 
-                    B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
-
-           /* [a] [B]^T * [Mater]  and save in [B]^T    */
-
-           temp_matrix = dMatrixMultRep(temp_matrix, B_Transpose, dof_per_elmt, 3, Mater_matrix, 3, 3);
-
-           /* [b] calculate stiffness : integral of [B]^T * [Mater] * [B] */
-
-           stiff = dMatrixMultRep(stiff, temp_matrix, dof_per_elmt, 3, B_matrix, 3, dof_per_elmt);
-
-           for (i = 1; i <= dof_per_elmt; i++) 
-             for (j = 1; j <= dof_per_elmt; j++) 
-                 p->stiff->uMatrix.daa[i-1][j-1]  += stiff[i-1][j-1];
-           }
-
-#ifdef DEBUG
-       dMatrixPrint("element stiffness matrix", p->stiff->uMatrix.daa, dof_per_elmt, dof_per_elmt);
-
-      /* check element stiffness : sum of row of K = 0 */
-
-       for (i = 1; i <= dof_per_elmt; i++) 
-          sum_row[i-1] =  0.0;
-
-       for (i = 1; i <= dof_per_elmt; i++) 
-          for (j = 1; j <= dof_per_elmt; j++) 
-            sum_row[i-1] +=  p->stiff->uMatrix.daa[i-1][j-1]; 
-
-       for (i = 1; i <= dof_per_elmt; i++) 
-         printf(" Stiffness K_e : sum of row[%d] = %lf \n", i, sum_row[i-1]); 
-
-#endif
-
-     /**************************************************/
-     /* Assign Units to Stiffness Matrix               */
-     /**************************************************/
-
-       /* Initiation of Stiffness Units Buffer                      */
-     
-       switch(UNITS_SWITCH) {
-         case ON:
-           if(UNITS_TYPE == SI) {
-              d1 = DefaultUnits("Pa");
-              d2 = DefaultUnits("m");
-           }
-           else {
-              d1 = DefaultUnits("psi");
-              d2 = DefaultUnits("in");
-           }
-
-           /* node 1 */
-           UnitsMultRep( &(p->stiff->spColUnits[0]), d1, d2 );
-           UnitsCopy( &(p->stiff->spColUnits[1]), &(p->stiff->spColUnits[0]) );
-
-           /* node i  i > 1*/
-           for(i = 2; i <= p->nodes_per_elmt; i++) {
-                for(j = 1; j <= p->dof_per_node; j++) {
-                    k  = p->dof_per_node*(i-1) + j;
-                    UnitsCopy( &(p->stiff->spColUnits[k-1]), &(p->stiff->spColUnits[0]) );
-                }
-           }
-           free((char *) d1->units_name);
-           free((char *) d1);
-           free((char *) d2->units_name);
-           free((char *) d2);
-
-           for( i=1 ; i<=p->size_of_stiff ; i++ )
-               ZeroUnits( &(p->stiff->spRowUnits[i-1]) );
-
-         break;
-         case OFF:
-         break;
-         default:
-         break;
-       }
-     
-#ifdef DEBUG
-       printf("*** in elmt_psps() : leaving case STIFF\n");
-#endif
-       
-      break;
-      case EQUIV_NODAL_LOAD:
-      /* calculate the equivalent nodal load */
-      /* due to distributed loading          */
-           
-#ifdef DEBUG
-       printf("*** in elmt_psps() : start case EQUIV_NODAL_LOAD: \n");
-#endif
-      /* initilize nodal_load */
-      
-      for(i = 1; i <= dof_per_elmt; i++) {
-          p->equiv_nodal_load->uMatrix.daa[i-1][0] = 0.0;
-          nodal_load[i-1][0] = 0.0;
-          load[i-1][0]= 0.0;
-      }
- 
-     for(i = 1; i<= no_integ_pts*no_integ_pts; i++) {
-         sg[i-1] = 0.0;
-         tg[i-1] = 0.0;
-         wg[i-1] = 0.0;
-     }
-      
-     if(no_integ_pts*no_integ_pts != lint)
-        pgauss(no_integ_pts,&lint,sg,tg,wg); 
-
-     /* start gaussian integration */
-
-     for(l = 1; l <= lint; l++) { 
-         shape(sg[l-1],tg[l-1],p->coord,shp,&jacobain,p->no_dimen,p->nodes_per_elmt, p->node_connect,0);
-
-            /* output: shp[0][i-1] = dN_i/dx          */
-            /*         shp[1][i-1] = dN_i/dy          */
-            /* compute [B] matrix at each Gaussian    */
-            /* integration point                      */
-
-            /*****************************************************/
-            /*  Derivative matrix (B_i)3x2;                      */
-            /*     B_i[0][0] = dNi/dx, B_i[0][1] = 0             */
-            /*     B_i[1][0] = 0,      B_i[1][1] = dNi/dy        */
-            /*     B_i[2][0] = dNi/dy, B_i[2][2] = dNi/dx        */
-            /*     [B] = [B_1, B_2, B_3, B_4, ..., B_n]          */
-            /*      n  = no of node                              */ 
-            /*****************************************************/
-            
-            /* material matrix */
-            Mater_matrix = MATER_MAT_PLANE(E.value, nu);      /* need to be changed */
-    
-            /* Form [B] matrix */
-            
-            for(j = 1; j <= p->nodes_per_elmt; j++) { 
-               k = 2*(j-1);
-               B_matrix[0][k]   = shp[0][j-1];
-               B_matrix[1][k+1] = shp[1][j-1];
-               B_matrix[2][k]   = shp[1][j-1];
-               B_matrix[2][k+1] = shp[0][j-1];
-            }
-            
-           /* muti. Jacobain determinant with weight coefficents and mater matrix */
-            jacobain = jacobain* wg[l-1];
-           
-           /* [a] CALCULATE EQUIVALENT NODAL FORCE DUE TO INITIAL STRAIN     */
-
-            if(p->nodal_init_strain != NULL) {
-
+                jacobian = jacobian*wg[ii-1];
                 for( i = 1; i <=3 ; i++ ) 
-                  for (j = 1; j <= 3; j++)  
-                    Mater_matrix[i-1][j-1]  *= jacobain;
+                    for (j = 1; j <= 3; j++)  
+                         Mater_matrix[i-1][j-1] *= jacobian;
 
-            /* Transpose [B] matrix */
-
-                for(i = 1; i <= 3; i++) 
-                    for(j = 1; j <= dof_per_elmt; j++)
-                        B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
-
-            /* calculate strain[] at gaussian points : strain = sum Ni*nodal_strain */
-
-                for (i = 1; i <= 3; i++)
-                  strain[i-1][0]  =  0.0;
-                
-                for (i = 1; i <= 3; i++) {
-                  for( j = 1; j <= p->nodes_per_elmt; j++) {
-                    strain[i-1][0]  += shp[2][j-1] * p->nodal_init_strain[i-1][j-1];
-                  }
-                }
-           /* [Mater]_3x3 * [strain]_3x1 and save in [stress]_3x1    */
-
-                stress = dMatrixMultRep(stress, Mater_matrix, 3, 3, strain, 3, 1);
-           
-           /* mutiply [B]^T * [Mater]* [strain] */
-
-              if(nodal_load == NULL ) { 
-                  nodal_load = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
-              } else {
-                  load = dMatrixMultRep(load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
-                  for (i = 1; i<= dof_per_elmt; i++)  {
-                       nodal_load[i-1][0] += load[i-1][0];
-                  }
-              }
-            }
-
-           /* [b] CALCULATE EQUIVALENT NODAL FORCE DUE TO INITIAL STRESS     */
-
-            if(p->nodal_init_stress != NULL) {
-
-            /* Transpose [B] matrix */
+                /* Transpose [B] matrix */
 
                 for(i = 1; i <= 3; i++)
-                    for(j = 1; j <= dof_per_elmt; j++)
+                    for(j = 1; j <= dof_per_elmt; j++) 
                         B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
 
-            /* calculate stress[] at gaussian points : stress = sum Ni*nodal_stress */
+                /* Compute [B]^T*[Mater] and save in [B]^T */
 
-                for (i = 1; i <= 3; i++)
-                  stress[i-1][0]  =  0.0;
-                
-                for (i = 1; i <= 3; i++) {
-                  for( j = 1; j <= p->nodes_per_elmt; j++) {
-                    stress[i-1][0]  += shp[2][j-1] * p->nodal_init_stress[i-1][j-1].value;
-                  }
-                  stress[i-1][0]  *=  jacobain;
-                }
+                temp_matrix = dMatrixMultRep(temp_matrix, B_Transpose,
+                                             dof_per_elmt, 3, Mater_matrix, 3, 3);
 
-           /* mutiply [B]^T * [stress] */
-               
-                if(nodal_load == NULL) {
-                  nodal_load  = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
-                } else {
-                  load        = dMatrixMultRep(load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
-                  for (i = 1; i<= dof_per_elmt; i++) 
-                    nodal_load[i-1][0] -= load[i-1][0];
-                  }
-            }
-           /* [c] CALCULATE EQUIVALENT NODAL FORCE DUE TO BODY FORCE         */
+                /* Calculate stiffness : Integral of [B]^T * [Mater] * [B] */
 
-            if(p->nodal_body_force != NULL) {
+                stiff = dMatrixMultRep(stiff, temp_matrix, dof_per_elmt, 3,
+                                       B_matrix, 3, dof_per_elmt);
+ 
+                for (i = 1; i <= dof_per_elmt; i++) 
+                for (j = 1; j <= dof_per_elmt; j++) 
+                     p->stiff->uMatrix.daa[i-1][j-1]  += stiff[i-1][j-1];
 
-            /* calculate body_force[] at gaussian points : body_force = sum Ni*body_force */
+                /* Free memory for material matrix with modified contents */
 
-                for (i = 1; i <= p->no_dimen; i++)
-                  body_force[i-1][0]  =  0.0;
-                
-                for(i = 1; i <= p->no_dimen; i++) {
-                    for( j = 1; j <= p->nodes_per_elmt; j++) {
-                        body_force[i-1][0] 
-                            += shp[2][j-1] * p->nodal_body_force[i-1][j-1].value*jacobain;
-
-                    /* mutiply [N]^T * [body_force] */
-
-                        k = (j-1)*p->no_dimen + i;
-                        if(nodal_load == NULL) {
-                           nodal_load[k-1][0] =  shp[2][j-1]*body_force[i-1][0];
-                        } else
-                           nodal_load[k-1][0] += shp[2][j-1]*body_force[i-1][0];
-                    }
-                }
+                MatrixFreeIndirectDouble(Mater_matrix, 3);
             }
 
-
-           /* [d] CALCULATE EQUIVALENT NODAL FORCE DUE TO TEMPERATURE CHANGE */ 
-
-            if(p->nodal_init_strain != NULL) {
-               for(i = 1; i <= 3 ; i++ ) 
-                   for(j = 1; j <= 3; j++)  
-                       Mater_matrix[i-1][j-1] *= jacobain;
-
-            /* Transpose [B] matrix */
-
-                for(i = 1; i <= 3; i++)
-                    for(j = 1; j <= dof_per_elmt; j++)
-                        B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
-
-           /*  [B]^T * [Mater]  and save in [B]^T    */
-
-                temp_matrix =
-                   dMatrixMultRep(temp_matrix, B_Transpose, dof_per_elmt, 3, Mater_matrix, 3, 3);
-               
-            /* calculate strain[] at gaussian points : strain = sum Ni*nodal_strain */
-
-                for(i = 1; i <= 3; i++)
-                    strain[i-1][0]  =  0.0;
-                
-                for(j = 1; j <= p->nodes_per_elmt; j++) {
-                    temperature  += shp[2][j-1] * p->nodal_temp[j-1].value;
-                }
-                for(i = 1; i <= 2; i++) {
-                    strain[i-1][0]  = temperature *alpha_thermal[i-1];
-                }
-                strain[2][0]    = 0.0;
-                    
-           /* mutiply [B]^T * [Mater]* [strain] */
-               
-                if(nodal_load == NULL) {
-                  nodal_load  = dMatrixMultRep(nodal_load, temp_matrix, dof_per_elmt, 3, strain, 3, 1);
-                } else {
-                  load        = dMatrixMultRep(load, temp_matrix, dof_per_elmt, 3, strain, 3, 1);
-                  for(i = 1; i<= dof_per_elmt; i++) 
-                      nodal_load[i-1][0] += load[i-1][0];
-                }
-            }
-
-           /* [e] CALCULATE EQUIVALENT NODAL FORCE DUE TO SURFACE TRACTION   */
-
-           /* add code later */
-
-          /* Transfer nodal_load to p->equiv_nodal_load */
-
-                 for(i = 1; i <= dof_per_elmt; i++) {
-                     p->equiv_nodal_load->uMatrix.daa[i-1][0] +=  nodal_load[i-1][0];
-                 }
-          }
-            
-   /* ------------ EQUIVALENT NODAL LOAD UNITS ------------*/
-   /* Young's Modulus E is in SI then Use SI, else use US  */
-   /* ---------------------------------------------------- */
-    switch(UNITS_SWITCH) {
-      case ON:
-       /* Initiation of Equivalent nodal load Units Buffer */
-
-       if(UNITS_TYPE == SI)
-          d1 = DefaultUnits("N");
-       else
-          d1 = DefaultUnits("lbf");
-
-       /* node 1 */
-       UnitsCopy( &(p->equiv_nodal_load->spRowUnits[0]), d1 ); 
-       UnitsCopy( &(p->equiv_nodal_load->spRowUnits[1]), d1 );
-
-       /* node i  i > 1*/
-       for ( i = 2; i <= p->nodes_per_elmt; i++) {
-             for( j = 1; j <= p->dof_per_node; j++) {
-                  k  = p->dof_per_node*(i-1) + j;
-                  UnitsCopy( &(p->equiv_nodal_load->spRowUnits[k-1]), d1 ); 
-             }
-       }
-
-       ZeroUnits( &(p->equiv_nodal_load->spColUnits[0]) );
-
-       free((char *) d1->units_name);
-       free((char *) d1);
-      break;
-      case OFF:
-      break;
-      default:
-      break;
-    }
+            /* [c] : Assign units to stiffness matrix */
      
-#ifdef DEBUG
-       printf("*** in elmt_psps() : leaving case EQUIV_NODAL_LOAD: \n");
-#endif
-           break;
+            if ( UNITS_SWITCH == ON ) {
+               if( CheckUnitsType() == SI) {
+                   d1 = DefaultUnits("Pa");
+                   d2 = DefaultUnits("m");
+               } else {
+                   d1 = DefaultUnits("psi");
+                   d2 = DefaultUnits("in");
+               }
 
-      case STRESS_UPDATE:
-           break;
-      case STRESS:
-      case LOAD_MATRIX:
-	
-#ifdef DEBUG
-       printf("*** in elmt_psps() : start case STRESS: or case LOAD_MATRIX: \n");
-#endif
+               /* Node 1 */
 
-           lint = (int ) 0;
-           if(isw == STRESS)      l=  no_stress_pts; /* stress pts         */
-           if(isw == LOAD_MATRIX) l=  no_integ_pts;  /* guassian integ pts */
+               UnitsMultRep( &(p->stiff->spColUnits[0]), d1, d2 );
+               UnitsCopy( &(p->stiff->spColUnits[1]), &(p->stiff->spColUnits[0]) );
 
-           /* initilize nodal_load */
+               /* Nodes 2 through 4 */
+
+               for(i = 2; i <= p->nodes_per_elmt; i++) {
+               for(j = 1; j <= p->dof_per_node; j++) {
+                   k  = p->dof_per_node*(i-1) + j;
+                   UnitsCopy( &(p->stiff->spColUnits[k-1]), &(p->stiff->spColUnits[0]) );
+               }
+               }
+
+               free((char *) d1->units_name);
+               free((char *) d1);
+               free((char *) d2->units_name);
+               free((char *) d2);
+
+               for( i=1 ; i<=p->size_of_stiff ; i++ )
+                    ZeroUnits( &(p->stiff->spRowUnits[i-1]) );
+
+            }
+            break;
+       case EQUIV_NODAL_LOAD: /* calculate the equivalent nodal loads */
+                              /* due to distributed loadings          */
+           
+            /* Initialize nodal_load */
       
-           for (i = 1; i <= dof_per_elmt; i++) {
-              nodal_load[i-1][0] = 0.0;
-              load[i-1][0]= 0.0;
-           }
+            for(i = 1; i <= dof_per_elmt; i++) {
+                p->equiv_nodal_load->uMatrix.daa[i-1][0] = 0.0;
+                nodal_load[i-1][0] = 0.0;
+                load[i-1][0]       = 0.0;
+            }
+ 
+            for(i = 1; i<= no_integ_pts*no_integ_pts; i++) {
+                sg[i-1] = 0.0; tg[i-1] = 0.0; wg[i-1] = 0.0;
+            }
 
-           for (i = 1; i<= no_integ_pts*no_integ_pts; i++) {
-              sg[i-1] = 0.0;
-              tg[i-1] = 0.0;
-              wg[i-1] = 0.0;
-           }
+            /* Compute Gaussian Integration Points */
+      
+            if(no_integ_pts*no_integ_pts != lint)
+               pgauss(no_integ_pts,&lint,sg,tg,wg); 
 
-          if(l*l != lint)
-              pgauss(l,&lint,sg,tg,wg);
+            /* Main loop for Gauss Integration */
 
-           /* element stress, strains and forces */
+            for(ii = 1; ii <= lint; ii++) { 
 
-            if(p->no_dimen == 2 && isw == STRESS) {
+                /* Compute shape functions */
 
-                printf("\n STRESS in  Element No  %d \n", p->elmt_no);
-                printf(" ================================================================================================== \n");
-                printf(" Gaussion    xi        eta         x         y          Stress-11       Stress-22        Stress-12 \n");
-                if(UNITS_SWITCH == OFF)
-                   printf("  Points \n");
-                if(UNITS_SWITCH == ON){
-                   if(UNITS_TYPE == SI)
-                      dp_stress = DefaultUnits("Pa");
-                   else
-                      dp_stress = DefaultUnits("psi");
-                   printf("  Points                           %s         %s             %s             %s               %s\n", 
-                             p->coord[0][0].dimen->units_name,
-                             p->coord[1][0].dimen->units_name,
-                             dp_stress->units_name,
-                             dp_stress->units_name,
-                             dp_stress->units_name);
-                   free((char *) dp_stress->units_name);
-                   free((char *) dp_stress);
+                shape(sg[ii-1],tg[ii-1],p->coord,shp,&jacobian,
+                      p->no_dimen,p->nodes_per_elmt, p->node_connect,0);
+
+                /* Form [B] matrix */
+            
+                for(j = 1; j <= p->nodes_per_elmt; j++) { 
+                    k = 2*(j-1);
+                    B_matrix[0][k]   = shp[0][j-1];
+                    B_matrix[1][k+1] = shp[1][j-1];
+                    B_matrix[2][k]   = shp[1][j-1];
+                    B_matrix[2][k+1] = shp[0][j-1];
                 }
-                printf(" --------------------------------------------------------------------------------------------------\n \n");
-            }
-#ifdef DEBUG
-            if(p->no_dimen == 2 && isw == LOAD_MATRIX) {
-                printf("\n NODAL LOAD in  Element No  %d \n", p->elmt_no);
-                printf(" ===================================================================================\n");
-                printf(" Gaussion    xi        eta         x         y          nodal_no        nodal_load  \n");
-                printf("  Points \n");
-                printf(" ----------------------------------------------------------------------------------- \n");
-            }
-#endif
 
-           for( l= 1; l<= lint; l++) {
-             /* element shape function and their derivatives */
-                shape(sg[l-1], tg[l-1],p->coord,shp,&jacobain,p->no_dimen,p->nodes_per_elmt, p->node_connect,0);
+                /* Get material matrix : see notes on dFlag above */
 
-            /* Form [B] matrix */
+                Mater_matrix = MaterialMatrixPlane( E.value, nu, dFlag );
             
-            for(j = 1; j <= p->nodes_per_elmt; j++) { 
-               k = 2*(j-1);
-               B_matrix[0][k]   = shp[0][j-1];
-               B_matrix[1][k+1] = shp[1][j-1];
-               B_matrix[2][k]   = shp[1][j-1];
-               B_matrix[2][k+1] = shp[0][j-1];
+                /* Multiply Jacobian determinant with weight  */
+                /* coefficents and material matrix            */
+
+                jacobian *= wg[ii-1];
+           
+                /* [a] Calculate equivalent nodal forces due to initial strains */
+
+                if(p->nodal_init_strain != NULL) {
+
+                   for( i = 1; i <= 3; i++ ) 
+                   for( j = 1; j <= 3; j++ )  
+                        Mater_matrix[i-1][j-1] *= jacobian;
+
+                   /* Transpose [B] matrix */
+
+                   for(i = 1; i <= 3; i++) 
+                   for(j = 1; j <= dof_per_elmt; j++)
+                        B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
+
+                   /* Calculate strain[] at gaussian points : strain = sum Ni*nodal_strain */
+
+                   for (i = 1; i <= 3; i++)
+                      strain[i-1][0]  =  0.0;
+                
+                   for (i = 1; i <= 3; i++) {
+                   for( j = 1; j <= p->nodes_per_elmt; j++) {
+                      strain[i-1][0]  += shp[2][j-1] * p->nodal_init_strain[i-1][j-1];
+                   }
+                   }
+
+                   /* [Mater]_3x3 * [strain]_3x1 and save in [stress]_3x1    */
+
+                   stress = dMatrixMultRep(stress, Mater_matrix, 3, 3, strain, 3, 1);
+           
+                   /* Mutiply [B]^T * [Mater]*[strain] */
+
+                   if(nodal_load == NULL ) { 
+                      nodal_load = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
+                   } else {
+                      load = dMatrixMultRep(load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
+                      for (i = 1; i<= dof_per_elmt; i++)  {
+                          nodal_load[i-1][0] += load[i-1][0];
+                      }
+                   }
+                }
+
+                /* [b] Calculate equivalent nodal force due to internal stress */
+
+                if(p->nodal_init_stress != NULL) {
+
+                   /* Transpose [B] matrix */
+
+                   for(i = 1; i <= 3; i++)
+                   for(j = 1; j <= dof_per_elmt; j++)
+                       B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
+
+                   /* Calculate stress[] at gaussian points : stress = sum Ni*nodal_stress */
+    
+                   for (i = 1; i <= 3; i++)
+                      stress[i-1][0]  =  0.0;
+                
+                   for(i = 1; i <= 3; i++) {
+                      for(j = 1; j <= p->nodes_per_elmt; j++) {
+                          stress[i-1][0]  += shp[2][j-1] * p->nodal_init_stress[i-1][j-1].value;
+                      }
+                      stress[i-1][0] *= jacobian;
+                   }
+
+                   /* Multiply [B]^T * [stress] */
+               
+                   if(nodal_load == NULL) {
+                      nodal_load  = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
+                   } else {
+                      load        = dMatrixMultRep(load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
+                      for (i = 1; i<= dof_per_elmt; i++) 
+                          nodal_load[i-1][0] -= load[i-1][0];
+                   }
+                }
+
+                /* [c] Calculate equivalent nodal force due to body force */
+
+                if(p->nodal_body_force != NULL) {
+
+                   /* Calculate body_force[] at gaussian points --  */
+                   /* body_force = sum of [ Ni*body_force ]         */
+
+                   for (i = 1; i <= p->no_dimen; i++)
+                      body_force[i-1][0]  =  0.0;
+                
+                   for(i = 1; i <= p->no_dimen; i++) {
+                      for( j = 1; j <= p->nodes_per_elmt; j++) {
+                          body_force[i-1][0] 
+                               += shp[2][j-1] * p->nodal_body_force[i-1][j-1].value*jacobian;
+
+                          /* Mutiply [N]^T * [body_force] */
+
+                          k = (j-1)*p->no_dimen + i;
+                          if(nodal_load == NULL) {
+                             nodal_load[k-1][0] =  shp[2][j-1]*body_force[i-1][0];
+                          } else
+                             nodal_load[k-1][0] += shp[2][j-1]*body_force[i-1][0];
+                      }
+                   }
+                }
+
+                /* [d] Calculate equivalent nodal force due to temperature change */ 
+  
+                if(p->nodal_init_strain != NULL) {
+
+                   for(i = 1; i <= 3 ; i++ ) 
+                   for(j = 1; j <= 3; j++)  
+                       Mater_matrix[i-1][j-1] *= jacobian;
+
+                   /* Transpose [B] matrix */
+
+                   for(i = 1; i <= 3; i++)
+                   for(j = 1; j <= dof_per_elmt; j++)
+                       B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
+
+                   /*  [B]^T * [Mater]  and save in [B]^T    */
+
+                   temp_matrix = dMatrixMultRep(temp_matrix, B_Transpose,
+                                                dof_per_elmt, 3, Mater_matrix, 3, 3);
+               
+                   /* Calculate strain[] at gaussian points : */
+                   /* strain = sum Ni*nodal_strain            */
+
+                   for(i = 1; i <= 3; i++)
+                       strain[i-1][0]  =  0.0;
+                
+                   for(j = 1; j <= p->nodes_per_elmt; j++) {
+                       temperature  += shp[2][j-1] * p->nodal_temp[j-1].value;
+                   }
+
+                   for(i = 1; i <= 2; i++) {
+                       strain[i-1][0]  = temperature *alpha_thermal[i-1];
+                   }
+
+                   strain[2][0] = 0.0;
+                    
+                   /* mutiply [B]^T * [Mater]* [strain] */
+               
+                   if(nodal_load == NULL) {
+                      nodal_load  = dMatrixMultRep(nodal_load, temp_matrix,
+                                                   dof_per_elmt, 3, strain, 3, 1);
+                   } else {
+                      load        = dMatrixMultRep(load, temp_matrix, dof_per_elmt, 3, strain, 3, 1);
+                      for(i = 1; i<= dof_per_elmt; i++) 
+                          nodal_load[i-1][0] += load[i-1][0];
+                   }
+                }
+
+                /* Transfer nodal_load to p->equiv_nodal_load */
+
+                for(i = 1; i <= dof_per_elmt; i++) {
+                    p->equiv_nodal_load->uMatrix.daa[i-1][0] +=  nodal_load[i-1][0];
+                }
             }
+
+            /*
+             *  =================================================== 
+             *  Initiation of Equivalent nodal load Units Buffer   
+             *  
+             *  Note : If Young's Modulus E is in SI then Use SI, 
+             *         otherwise, use US. 
+             *  =================================================== 
+             */
+
+            if (UNITS_SWITCH == ON) {
+               if( CheckUnitsType() == SI)
+                   d1 = DefaultUnits("N");
+               else
+                   d1 = DefaultUnits("lbf");
+
+               /* node 1 */
+
+               UnitsCopy( &(p->equiv_nodal_load->spRowUnits[0]), d1 ); 
+               UnitsCopy( &(p->equiv_nodal_load->spRowUnits[1]), d1 );
+
+               /* node i  i > 1*/
+               for(i = 2; i <= p->nodes_per_elmt; i++) {
+                  for(j = 1; j <= p->dof_per_node; j++) {
+                      k  = p->dof_per_node*(i-1) + j;
+                      UnitsCopy( &(p->equiv_nodal_load->spRowUnits[k-1]), d1 ); 
+                  }
+               }
+
+               ZeroUnits( &(p->equiv_nodal_load->spColUnits[0]) );
+
+               free((char *) d1->units_name);
+               free((char *) d1);
+            }
+            break;
+       case STRESS_UPDATE:
+            break;
+       case LOAD_MATRIX:
+       case STRESS:          /* compute and print element stresses */
+
+            lint = (int ) 0;
+            if(isw == STRESS)     
+               ii = no_stress_pts;   /* stress pts         */
+            if(isw == LOAD_MATRIX)
+               ii = no_integ_pts;    /* guassian integ pts */
+
+            /* Initilize nodal_load */
+      
+            for(i = 1; i <= dof_per_elmt; i++) {
+               nodal_load[i-1][0] = 0.0;
+               load[i-1][0]       = 0.0;
+            }
+
+            for (i = 1; i<= no_integ_pts*no_integ_pts; i++) {
+               sg[i-1] = 0.0; tg[i-1] = 0.0; wg[i-1] = 0.0;
+            }
+
+            if(ii*ii != lint)
+               pgauss( ii, &lint, sg, tg, wg);
+
+            /* Get units */
+
+            if( UNITS_SWITCH == ON ) {
+               if( CheckUnitsType() == SI) {
+                   dp_length = DefaultUnits("m");
+                   dp_stress = DefaultUnits("Pa");
+               } else {
+                   dp_length = DefaultUnits("in");
+                   dp_stress = DefaultUnits("psi");
+               }
+            }
+
+            /* Print Element Stresses, Strains and Forces */
+
+            if( isw == STRESS ) {
+
+               printf("\n");
+               printf("Stresses in Element No %d\n", p->elmt_no);
+               printf("=======================================================================\n");
+               printf("Gaussion         x          y     stress-11     stress-22     stress-12 \n");
+
+               if(UNITS_SWITCH == ON) {
+                  printf("  Points       %3s        %3s", dp_length->units_name,
+                                                          dp_length->units_name );
+                  printf("    %10s    %10s    %10s\n", dp_stress->units_name,
+                                                       dp_stress->units_name,
+                                                       dp_stress->units_name );
+               } else {
+                  printf("  Points \n");
+               }
+
+               printf("=======================================================================\n");
+            }
+
+            /* Compute (3x3) Constituitive Material Matrix */
+
+            Mater_matrix = MaterialMatrixPlane( E.value, nu, dFlag );
+
+            /* Gauss Integration */
+
+            for( ii = 1; ii <= lint; ii++) {
+
+                /* Get element shape function and their derivatives */
+
+                shape( sg[ii-1], tg[ii-1], p->coord,shp, &jacobian, p->no_dimen,
+                       p->nodes_per_elmt, p->node_connect,0 );
+
+                /* Form [B] matrix */
             
-            Mater_matrix = MATER_MAT_PLANE(E.value, nu);
+                for(j = 1; j <= p->nodes_per_elmt; j++) { 
+                    k = 2*(j-1);
+                    B_matrix[0][k]   = shp[0][j-1];
+                    B_matrix[1][k+1] = shp[1][j-1];
+                    B_matrix[2][k]   = shp[1][j-1];
+                    B_matrix[2][k+1] = shp[0][j-1];
+                }
             
-             /* calculate strains at guassian integretion pts */
+                /* Calculate strains at guassian integretion pts */
 
                 for(i = 1;i <= 3; i++)
                     strain[i-1][0] = 0.0;
 
-                xx = 0.0;
-                yy = 0.0;
-
+                xx = 0.0; yy = 0.0;
                 for(j = 1; j <= p->nodes_per_elmt; j++) {
                     xx = xx + shp[2][j-1] * p->coord[0][j-1].value;
                     yy = yy + shp[2][j-1] * p->coord[1][j-1].value;
 
-                /*  converting p->displ into a array */
+                    /*  converting p->displ into a array */
                     
-                   for ( k = 1; k <= p->dof_per_node; k++) {
-                      j1 = p->dof_per_node*(j-1) + k; 
-                      displ[j1-1][0] = p->displ->uMatrix.daa[k-1][j-1];
-                   }
+                    for ( k = 1; k <= p->dof_per_node; k++) {
+                       j1 = p->dof_per_node*(j-1) + k; 
+                       displ[j1-1][0] = p->displ->uMatrix.daa[k-1][j-1];
+                    }
                 }
 
                 strain = dMatrixMultRep(strain, B_matrix, 3, dof_per_elmt, displ, dof_per_elmt, 1);
                 
-             /* compute stress */
+                /* Compute Stress */
 
                 stress = dMatrixMultRep(stress, Mater_matrix, 3, 3, strain, 3, 1);
+
+                /* Compute equivalent nodal forces for stresses */
+                /* F_equiv = integral of [B]^T stress dV        */ 
 
                 if(isw == LOAD_MATRIX) {       
                    for(i = 1; i <= 3; i++)
                        for(j = 1; j <= dof_per_elmt; j++)
                            B_Transpose[j-1][i-1] = B_matrix[i-1][j-1];
 
-                  /* compute eqivalent node forces due to stress */
-                  /* f_equiv = int [B]^T stress dV               */ 
+                  dv = jacobian*wg[ii-1];
 
-                   dv = jacobain*wg[l-1];
+                  for (i = 1; i<= 3; i++)
+                       stress[i-1][0] *= dv;
 
-                   for (i = 1; i<= 3; i++)
-                     stress[i-1][0] *= dv;
-
-                     nodal_load = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
+                  nodal_load = dMatrixMultRep(nodal_load, B_Transpose, dof_per_elmt, 3, stress, 3, 1);
                 }
-                else { /* case STRESS */
 
-                  /* output stresses  */
-                  printf("   %d  %10.4f %10.4f %10.4f %10.4f", l, sg[l-1], tg[l-1], xx, yy);
-                  printf("\t%10.4f\t%10.4f\t%10.4f\n", stress[0][0], stress[1][0], stress[2][0]);  
-                }
-               
                 for(i = 1; i <= dof_per_elmt; i++) 
-                   p->nodal_loads[i-1].value += nodal_load[i-1][0];
+                    p->nodal_loads[i-1].value += nodal_load[i-1][0];
+
+                /* Print stresses  */
+
+                if(isw == STRESS && UNITS_SWITCH == ON) {
+                   printf(" %7d %10.4f %10.4f", ii,
+                            xx/dp_length->scale_factor,
+                            yy/dp_length->scale_factor);
+                   printf(" %12.4e  %12.4e  %12.4e\n",
+                            stress[0][0]/dp_stress->scale_factor,
+                            stress[1][0]/dp_stress->scale_factor,
+                            stress[2][0]/dp_stress->scale_factor );
+                }
+
+                if(isw == STRESS && UNITS_SWITCH == OFF) {
+                   printf(" %7d %10.4f %10.4f", ii, xx, yy);
+                   printf(" %12.4e  %12.4e  %12.4e\n",
+                            stress[0][0], stress[1][0], stress[2][0] );
+                }
             }
 
-   /* ------------NODAL LOAD UNITS ------------------------*/
-   /* The units type is determined by the SetUnitsType()   */
-   /* ---------------------------------------------------- */
-    switch(UNITS_SWITCH) {
-      case ON:
-        if(UNITS_TYPE == SI)
-           d1 = DefaultUnits("N");
-        else
-           d1 = DefaultUnits("lbf");
+            /* Free memory for units used in printing stresses */
 
-        /* node no 1 */
-        UnitsCopy( p->nodal_loads[0].dimen, d1 );
-        UnitsCopy( p->nodal_loads[1].dimen, d1 );
-        /* node no > 1 */
-        for(i = 2; i <= p->nodes_per_elmt; i++) {    
-            for(j = 1; j <= p->dof_per_node; j++) {
-                k = p->dof_per_node*(i-1)+j;
-                UnitsCopy( p->nodal_loads[k-1].dimen, d1 );
+            if(p->no_dimen == 2 && isw == STRESS) {
+               if(UNITS_SWITCH == ON) {
+                  free( dp_length->units_name );
+                  free( dp_length );
+                  free( dp_stress->units_name );
+                  free( dp_stress );
+               }
             }
-        }
-        free((char *) d1->units_name);
-        free((char *) d1);
-      break;
-      case OFF:
-      break;
-      default:
-      break;
-    }
 
- /* ------------====================-------------------- */
+            /* 
+             *  =================================================================
+             *  Nodal Load Units : units type is determined by the SetUnitsType()                 
+             *  =================================================================
+             */ 
+
+            if( UNITS_SWITCH == ON ) {
+                if( CheckUnitsType() == SI)
+                    d1 = DefaultUnits("N");
+                else
+                    d1 = DefaultUnits("lbf");
+
+               /* Node no 1 */
+
+               UnitsCopy( p->nodal_loads[0].dimen, d1 );
+               UnitsCopy( p->nodal_loads[1].dimen, d1 );
+
+               /* Node no > 1 */
+
+               for(i = 2; i <= p->nodes_per_elmt; i++) {    
+               for(j = 1; j <= p->dof_per_node; j++) {
+                   k = p->dof_per_node*(i-1)+j;
+                   UnitsCopy( p->nodal_loads[k-1].dimen, d1 );
+               }
+               }
+               free((char *) d1->units_name);
+               free((char *) d1);
+            }
+            break;
+       case STRESS_MATRIX:           /* save element stresses in working array */
+
+            lint = (int ) 0;
+            if(isw == STRESS_MATRIX)     
+               ii = no_stress_pts;   /* stress pts         */
+
+            /* Initilize nodal_load */
+      
+            for(i = 1; i <= dof_per_elmt; i++) {
+               nodal_load[i-1][0] = 0.0;
+               load[i-1][0]       = 0.0;
+            }
+
+            for (i = 1; i<= no_integ_pts*no_integ_pts; i++) {
+               sg[i-1] = 0.0; tg[i-1] = 0.0; wg[i-1] = 0.0;
+            }
+
+            if(ii*ii != lint)
+               pgauss( ii, &lint, sg, tg, wg);
+
+            /* Get units */
+
+            if( UNITS_SWITCH == ON ) {
+               if( CheckUnitsType() == SI) {
+                   dp_length = DefaultUnits("m");
+                   dp_stress = DefaultUnits("Pa");
+               } else {
+                   dp_length = DefaultUnits("in");
+                   dp_stress = DefaultUnits("psi");
+               }
+            }
+
+            /* Compute (3x3) constituitive material matrix */
+
+            Mater_matrix = MaterialMatrixPlane( E.value, nu, dFlag );
+
+            /* Gauss Integration */
+
+            for( ii = 1; ii <= lint; ii++) {
+
+                /* Get element shape function and their derivatives */
+
+                shape( sg[ii-1], tg[ii-1], p->coord,shp, &jacobian, p->no_dimen,
+                       p->nodes_per_elmt, p->node_connect,0 );
+
+                /* Form [B] matrix */
+            
+                for(j = 1; j <= p->nodes_per_elmt; j++) { 
+                    k = 2*(j-1);
+                    B_matrix[0][k]   = shp[0][j-1];
+                    B_matrix[1][k+1] = shp[1][j-1];
+                    B_matrix[2][k]   = shp[1][j-1];
+                    B_matrix[2][k+1] = shp[0][j-1];
+                }
+            
+                /* Calculate strains at guassian integretion pts */
+
+                for(i = 1;i <= 3; i++)
+                    strain[i-1][0] = 0.0;
+
+                xx = 0.0; yy = 0.0;
+                for(j = 1; j <= p->nodes_per_elmt; j++) {
+                    xx = xx + shp[2][j-1] * p->coord[0][j-1].value;
+                    yy = yy + shp[2][j-1] * p->coord[1][j-1].value;
+
+                    /*  converting p->displ into a array */
+                    
+                    for ( k = 1; k <= p->dof_per_node; k++) {
+                       j1 = p->dof_per_node*(j-1) + k; 
+                       displ[j1-1][0] = p->displ->uMatrix.daa[k-1][j-1];
+                    }
+                }
+
+                strain = dMatrixMultRep(strain, B_matrix, 3, dof_per_elmt, displ, dof_per_elmt, 1);
+                
+                /* Compute Stress */
+
+                stress = dMatrixMultRep(stress, Mater_matrix, 3, 3, strain, 3, 1);
+
+                /* Compute equivalent nodal forces for stresses */
+                /* F_equiv = integral of [B]^T stress dV        */ 
+
+                for(i = 1; i <= dof_per_elmt; i++) 
+                    p->nodal_loads[i-1].value += nodal_load[i-1][0];
+
+                /* Save element level stresses in working array */
+                /* Set column buffer units                      */
+
+                if(ii == 1 ) {
+                   UnitsCopy( &(p->stress->spColUnits[0]), dp_length ); 
+                   UnitsCopy( &(p->stress->spColUnits[1]), dp_length ); 
+                   UnitsCopy( &(p->stress->spColUnits[2]), dp_stress ); 
+                   UnitsCopy( &(p->stress->spColUnits[3]), dp_stress ); 
+                   UnitsCopy( &(p->stress->spColUnits[4]), dp_stress ); 
+                }
+
+                /* Zero out row buffer units */
+
+                ZeroUnits( &(p->stress->spRowUnits[ii-1]) );
+
+                /* Transfer xx and yy coordinates to to working stress matrix */
+
+                p->stress->uMatrix.daa[ii-1][0] = xx;
+                p->stress->uMatrix.daa[ii-1][1] = yy;
+
+                /* Transfer internal stresses to working stress matrix */
+
+                p->stress->uMatrix.daa[ii-1][2] = stress[0][0];
+                p->stress->uMatrix.daa[ii-1][3] = stress[1][0];
+                p->stress->uMatrix.daa[ii-1][4] = stress[2][0];
+            }
             break;
        case MASS_MATRIX:
              
-            /* compute consistent mass matrix      */
-            /* p->type should be -1 for consistent */
+            /*
+             *  ==================================================================
+             *  Compute consistent mass matrix p->type should be -1 for consistent
+             *  ==================================================================
+             */
 
-            l = no_integ_pts; 
+            /* Zero contents of integration points arrays */
 
-           printf(" no_integ_pts = %d \n", l);
-           for (i = 1; i<= no_integ_pts*no_integ_pts; i++) {
-              sg[i-1] = 0.0;
-              tg[i-1] = 0.0;
-              wg[i-1] = 0.0;
-           }
+            ii = no_integ_pts; 
+            for (i = 1; i<= no_integ_pts*no_integ_pts; i++) {
+               sg[i-1] = 0.0; tg[i-1] = 0.0; wg[i-1] = 0.0;
+            }
 
-            if(l*l != lint)
-               pgauss(l,&lint,sg,tg,wg);
+            /* Get Gauss integration points */
 
-            for(l=1; l<= lint; l++) {
+            if(ii*ii != lint)
+               pgauss(ii,&lint,sg,tg,wg);
 
-             /* compute shape functions */
+            for(ii=1; ii <= lint; ii++) {
 
-                shape(sg[l-1],tg[l-1],p->coord,shp,&jacobain,p->no_dimen, p->nodes_per_elmt,p->node_connect,0);
+                /* Compute shape functions */
 
-                dv = density.value * wg[l-1] * jacobain;
+                shape(sg[ii-1],tg[ii-1],p->coord,shp,&jacobian,p->no_dimen,
+                      p->nodes_per_elmt,p->node_connect,0);
 
-             /* for each node compute db = shape * dv  */
+                dv = density.value * wg[ii-1] * jacobian;
+
+                /* For each node compute db = shape * dv  */
+
                 j1 = 1;
                 for(j = 1; j<= p->nodes_per_elmt; j++){
                     w11 = shp[2][j-1] * dv;
 
-                 /* compute lumped mass */
-                 /* ?? store lumped mass in p->nodal_loads ?? */
+                    /* Compute lumped mass (store lumped mass in p->nodal_loads) */
+
                     p->nodal_loads[j1-1].value = p->nodal_loads[j1-1].value + w11; 
 
-                 /* for each node k compute mass matrix ( upper triangular part ) */
+                    /* For each node compute mass matrix ( upper triangular part ) */
+
                     k1 = j1;
                     for(k = j; k <= p->nodes_per_elmt; k++) {
                         stiff[j1-1][k1-1] += shp[2][k-1] * w11;
@@ -780,15 +880,12 @@ DIMENSIONS     *d1, *d2, *d3;
                       p->stiff->uMatrix.daa[i-1][j-1] += stiff[i-1][j-1];
                    }
                 }
-                 
             }
 
-            /* compute missing parts and lower part by symmetries */
+            /* Compute missing parts and lower part by symmetries */
 
             dof_per_elmt = p->nodes_per_elmt* p->dof_per_node;
-
             for(j = 1; j <= dof_per_elmt; j++){
-                /* ??????? Store lumped mass in p->nodal_loads ?? */
                 p->nodal_loads[j].value = p->nodal_loads[j-1].value;
                 for(k = j; k <= p->dof_per_node; k = k + p->dof_per_node) {
                     p->stiff->uMatrix.daa[j][k]      = p->stiff->uMatrix.daa[j-1][k-1];
@@ -797,82 +894,53 @@ DIMENSIONS     *d1, *d2, *d3;
                 }  
             }
 
-#ifdef DEBUG
-      /* check element mass : sum of row of Mass */
+            /* Units for Mass Matrix */
 
-       for (i = 1; i <= dof_per_elmt; i++)
-          sum_row[i-1] =  0.0;
+            if(UNITS_SWITCH == ON) {
+               if( CheckUnitsType() == SI || CheckUnitsType() == SI_US ) {
+                   d1 = DefaultUnits("Pa");
+                   d1 = DefaultUnits("m");
+               } else {
+                   d1 = DefaultUnits("psi");
+                   d1 = DefaultUnits("in");
+               }
 
-       for (i = 1; i <= dof_per_elmt; i++)
-          for (j = 1; j <= dof_per_elmt; j++)
-            sum_row[i-1] +=  p->stiff->uMatrix.daa[i-1][j-1];
+               d3 = DefaultUnits("sec");
 
-       sum = 0;
-       for (i = 1; i <= dof_per_elmt; i++){
-         printf(" Mass M_e : sum of row[%d] = %lf \n", i, sum_row[i-1]);
-         sum += sum_row[i-1];
-       }
-         printf(" Mass M_e : sum = %lf \n",sum);
+               /* node no 1 */
 
+               UnitsMultRep( &(p->stiff->spColUnits[0]), d1, d2 );
+               UnitsCopy( &(p->stiff->spColUnits[1]), &(p->stiff->spColUnits[0]) );
 
-#endif
+               UnitsPowerRep( &(p->stiff->spRowUnits[0]), d3, 2.0, NO );
+               UnitsCopy( &(p->stiff->spRowUnits[1]), &(p->stiff->spRowUnits[0]) );
 
- /* ------------ MASS UNITS ---------------------------- */
- /* Initiation of Mass Units Buffer                      */
+              /* node no > 1 */
 
-    switch(UNITS_SWITCH) {
-      case ON:
-        if(UNITS_TYPE == SI || UNITS_TYPE == SI_US ) {
-           d1 = DefaultUnits("Pa");
-           d1 = DefaultUnits("m");
-        }
-        else {
-           d1 = DefaultUnits("psi");
-           d1 = DefaultUnits("in");
-        }
-        d3 = DefaultUnits("sec");
+              for(i = 2; i <= p->nodes_per_elmt; i++) {    
+              for(j = 1; j <= p->dof_per_node; j++) {
+                  k = p->dof_per_node*(i-1)+j;
+                  UnitsCopy( &(p->stiff->spColUnits[k-1]), &(p->stiff->spColUnits[0]) );
+                  UnitsCopy( &(p->stiff->spRowUnits[k-1]), &(p->stiff->spRowUnits[0]) );
+              }
+              }
 
-        /* node no 1 */
-        UnitsMultRep( &(p->stiff->spColUnits[0]), d1, d2 );
-        UnitsCopy( &(p->stiff->spColUnits[1]), &(p->stiff->spColUnits[0]) );
-
-        UnitsPowerRep( &(p->stiff->spRowUnits[0]), d3, 2.0, NO );
-        UnitsCopy( &(p->stiff->spRowUnits[1]), &(p->stiff->spRowUnits[0]) );
-
-        /* node no > 1 */
-        for(i = 2; i <= p->nodes_per_elmt; i++) {    
-            for(j = 1; j <= p->dof_per_node; j++) {
-                k = p->dof_per_node*(i-1)+j;
-                UnitsCopy( &(p->stiff->spColUnits[k-1]), &(p->stiff->spColUnits[0]) );
-                UnitsCopy( &(p->stiff->spRowUnits[k-1]), &(p->stiff->spRowUnits[0]) );
-            }
-        }
-        free((char *) d1->units_name);
-        free((char *) d1);
-        free((char *) d2->units_name);
-        free((char *) d2);
-        free((char *) d3->units_name);
-        free((char *) d3);
-      break;
-      case OFF:
-      break;
-      default:
-      break;
+              free((char *) d1->units_name);
+              free((char *) d1);
+              free((char *) d2->units_name);
+              free((char *) d2);
+              free((char *) d3->units_name);
+              free((char *) d3);
+           }
+           break;
+       default:
+           break;
     }
-     
- /* ------------====================-------------------- */
 
-#ifdef DEBUG
-       printf("*** leaving elmt_psps() case : MASS_MATRIX  \n");
-#endif
-            break;
-            default:
-            break;
-    }
+    /* [d] : free memory and leave */
    
-    free(alpha_thermal);
-    free(alpha_thermal);
     free(sum_row);
+
     MatrixFreeIndirectDouble(strain, 3);
     MatrixFreeIndirectDouble(stress, 3);
     MatrixFreeIndirectDouble(body_force, 3);
@@ -885,200 +953,112 @@ DIMENSIONS     *d1, *d2, *d3;
     MatrixFreeIndirectDouble(temp_matrix, dof_per_elmt);
     MatrixFreeIndirectDouble(shp, 3);
     
-
     return(p);
 }
 
 
-/* ================================================== */
-/* shape function                                     */
-/* ================================================== */
+/* 
+ *  ========================================================================= 
+ *  shape() : shape function                                    
+ * 
+ *     form 4-node quadrilateral shape function                
+ *     shape function:                  Ni = shape[2][i]       
+ *                                      node no. i = 1, .. 4    
+ *     derivatives of shape functions:  dNi/d(ss) = shape[0][i] 
+ *                                      dNi/d(tt) = shape[1][i] 
+ * 
+ *  Input  :  double ss        -- 
+ *            double tt        -- 
+ *            QUANTITY **coord -- 
+ *  Output : 
+ *  ========================================================================= 
+ */ 
 
 int shape(ss,tt,coord,shp,jacobian,no_dimen,nodes_per_elmt,node_connect,flg)
-double  ss, tt, **shp,*jacobian, *node_connect;
-QUANTITY                          **coord;
-int              no_dimen, nodes_per_elmt, flg;
+double  ss, tt, **shp, *jacobian, *node_connect;
+QUANTITY   **coord;
+int       no_dimen;
+int nodes_per_elmt;
+int            flg;
 {
-int i,j,k;
 double  s[4], t[4], xs[2][2], sx[2][2], tp;
 double  **shp_temp;
+int i, j, k;
+
+    /* [a] : Initialize arrays */
  
     shp_temp = MatrixAllocIndirectDouble(2, 4);
-
     s[0] =  0.5; s[1] = -0.5;
     s[2] = -0.5; s[3] =  0.5;
-
     t[0] =  0.5; t[1] =  0.5;
     t[2] = -0.5; t[3] = -0.5;
 
-  switch(nodes_per_elmt) { 
-    case 3: 
-    case 4:
+    /* [b] : form shape functions */
 
-    /* form 4-node quadrilateral shape function                  */
-    /* shape function:                  Ni = shape[2][i]         */
-    /*                                  node no. i = 1, .. 4     */
-    /* derivatives of shape functions:  dNi/d(ss) = shape[0][i]  */
-    /*                                  dNi/d(tt) = shape[1][i]  */
+    switch(nodes_per_elmt) { 
+        case 3: case 4:
+           for(i = 1; i <= 4; i++){
+               shp[2][i-1]      = (0.5 + s[i-1] * ss) * ( 0.5 + t[i-1] * tt); 
+               shp_temp[0][i-1] = s[i-1] * (0.5 + t[i-1] * tt);                
+               shp_temp[1][i-1] = t[i-1] * (0.5 + s[i-1] * ss);
+           }
 
-    for(i = 1; i <= 4; i++){
-        shp[2][i-1]      = (0.5 + s[i-1] * ss) * ( 0.5 + t[i-1] * tt); 
-        shp_temp[0][i-1] = s[i-1] * (0.5 + t[i-1] * tt);                
-        shp_temp[1][i-1] = t[i-1] * (0.5 + s[i-1] * ss);
-    }
+           /* Form triangle by adding third and fourth node together */
 
-    /* form triangle by adding third and fourth node together */
+           if(nodes_per_elmt == 3) { 
+               shp[2][2] = shp[2][2] + shp[2][3];
+               for(i = 0; i <= 1; i++)
+                   shp_temp[i][2] = shp_temp[i][2] + shp_temp[i][3];
+           }
 
-    if(nodes_per_elmt == 3) { 
-        shp[2][2] = shp[2][2] + shp[2][3];
-        for(i = 0; i <= 1; i++)
-            shp_temp[i][2] = shp_temp[i][2] + shp_temp[i][3];
-    }
+           /* Construct jacobian matrix and its determinant */
 
-     /* construct jacobian matrix and its determinant */
+           for(i = 1; i <= no_dimen; i++)      /* no_dimen = 2 */
+           for(j = 1; j <= no_dimen; j++) {
+               xs[i-1][j-1] = 0.0;
+               for(k = 1; k <= nodes_per_elmt; k++)
+                   xs[i-1][j-1] = xs[i-1][j-1] + coord[i-1][k-1].value*shp_temp[j-1][k-1];
+           }
 
-     for(i = 1; i <= no_dimen; i++)      /* no_dimen = 2 */
-         for(j = 1; j <= no_dimen; j++) {
-             xs[i-1][j-1] = 0.0;
-             for(k = 1; k <= nodes_per_elmt; k++)
-                 xs[i-1][j-1] = xs[i-1][j-1] + coord[i-1][k-1].value*shp_temp[j-1][k-1];
-         }
+           *jacobian = xs[0][0] * xs[1][1] - xs[0][1] *xs[1][0];
 
-     *jacobian = xs[0][0] * xs[1][1] - xs[0][1] *xs[1][0];
+           if(flg == TRUE)
+              return;
 
-    if(flg == TRUE) return;
+           /* Compute Jacobian inverse matrix */
 
-    /* compute Jacobain inverse matrix */
+           sx[0][0] = xs[1][1]/ *jacobian;
+           sx[1][1] = xs[0][0]/ *jacobian;
+           sx[0][1] = - xs[0][1]/ *jacobian;
+           sx[1][0] = - xs[1][0]/ *jacobian;
 
-    sx[0][0] = xs[1][1]/ *jacobian;
-    sx[1][1] = xs[0][0]/ *jacobian;
-    sx[0][1] = - xs[0][1]/ *jacobian;
-    sx[1][0] = - xs[1][0]/ *jacobian;
-
-
-    /* form global derivatives */
-
-    /* save dNi/dx, dNi/dy into shp[2][node] */
+           /* Save dNi/dx, dNi/dy into shp[2][node] */
   
-    for(i = 1; i <= nodes_per_elmt; i++){
-        shp[0][i-1] = shp_temp[0][i-1]*sx[0][0] + shp_temp[1][i-1]*sx[0][1];
-        shp[1][i-1] = shp_temp[0][i-1]*sx[1][0] + shp_temp[1][i-1]*sx[1][1];
-    
-    }
-    break;
-
-    case 5: case 6: case 7: case 8:
-       shp0(ss, tt, shp, node_connect, nodes_per_elmt);
-    break;
-
-    default:
-    break;
-  }
-#ifdef DEBUG
-
-   printf(" in shape () \n");
-    for(j = 1; j <= nodes_per_elmt; j++){
-            printf("   dN/dx[%d] = %lf ", j , shp[0][j-1]);
-            printf("   dN/dy[%d] = %lf ", j , shp[1][j-1]);
-            printf("       N[%d] = %lf \n", j , shp[2][j-1]);
+           for(i = 1; i <= nodes_per_elmt; i++){
+               shp[0][i-1] = shp_temp[0][i-1]*sx[0][0] + shp_temp[1][i-1]*sx[0][1];
+               shp[1][i-1] = shp_temp[0][i-1]*sx[1][0] + shp_temp[1][i-1]*sx[1][1];
+           }
+           break;
+      default:
+           break;
    }
-   printf(" leaving shape () \n");
-#endif
 
    MatrixFreeIndirectDouble(shp_temp, 2);
-    return;
-}
-
-/* ================================ */
-/* shap0                            */
-/* ================================ */
-
-int shp0(s,t,shp,ix,nel)
-double s,t,shp[4][10];
-int  *ix;
-int nel;
-{
-double s2, t2;
-int i,j,k,l;
-
-    s2 = (1- s * s)/2;
-    t2 = (1 - t * t)/2;
-
-    for(i = 5; i<= 9 ;i++)
-    for(j =1;j<= 3 ; j++)
-        shp[j][i] = 0.0;
-
-    /* midside nodes (serendipty)  */
-
-    if(ix[5] == 0) goto NEXT1;
-        shp[1][5] = -s*(1-t);
-        shp[2][5] = -s2;
-        shp[3][5] =  s2*(1-t);
-
-    NEXT1:
-        if(nel < 6) goto NEXT7;
-        if(ix[6] == 0) goto NEXT2;
-
-        shp[1][6] = t2;
-        shp[2][6] = - t *(1+s);
-        shp[3][6] =   t2*(1+s);
-
-   NEXT2:
-        if(nel < 7) goto NEXT7;
-        if(ix[7] == 0) goto NEXT3;
-
-        shp[1][7] = -s*(1 + t);
-        shp[2][7] = s2;
-        shp[3][7] = s2*(1+t);
-
-   NEXT3:
-        if(nel < 8) goto NEXT7;
-        if(ix[8] == 0) goto NEXT4;
-
-        shp[1][8] = -t2;
-        shp[2][8] = - t *(1-s);
-        shp[3][8] = t2*(1-s);
-
-     /* interior node (langragian) */
-   NEXT4:
-        if(nel < 9) goto NEXT7;
-        if(ix[9] == 0) goto NEXT7;
-
-        shp[1][9] = -4 * s *  t2;
-        shp[2][9] = -4 * t * s2;
-        shp[3][9] =  4 * s2 * t2;
-
-     /* correct edge nodes for interior node(langrangian) */
-
-        for(j=1;j<=3;j++) {
-            for(i=1;i<=4;i++)
-                shp[j][i] = shp[j][i] - 0.25 * shp[j][9];
-                for(i=5;i<=8;i++)
-                if(ix[i] != 0)
-	           shp[j][i] = shp[j][i] - .5 *shp[j][9];
-        }
-
-     /* correct corner nodes for presence of mideside nodes */
-   NEXT7:
-        k = 8;
-        for(i=1;i<=4;i++){
-            l = i +4;
-            for(j=1;j<=3;j++)
-                shp[j][i] = shp[j][i] - 0.50 *(shp[j][k] + shp[j][l]);
-                k = 1;
-        }
-
-        return(1);
-
+   return;
 }
 
 
-/* ======================== */
-/* gauss  integration       */
-/* ======================== */
+/*
+ *  ============================================================================= 
+ *  gauss() : Gauss Integration 
+ *
+ *  Input :
+ *  Output :
+ *  ============================================================================= 
+ */
 
 #ifdef __STDC__
-gauss(double *sg, double *ag, int lt)
+gauss( double *sg, double *ag, int lt)
 #else
 gauss(sg, ag, lt)
 double *sg, *ag;
@@ -1088,70 +1068,57 @@ int lt;
 double t;
 int    i;
 
-#ifdef DEBUG
-   printf(" ******enter gauss() \n");
-   printf("       no_integ_pts = %d \n", lt);
-#endif
+    switch(lt) {
+        case 1:
+             sg[1] = 0.0;
+             ag[1] = 2.0;
+             break;
+        case 2:
+             sg[1] = -1/sqrt(3.);
+             sg[2] =  -sg[1];
+             ag[1] = 1.0; 
+             ag[2] = 1.0; 
+             break;
+        case 3:
+             sg[1] = -sqrt(0.6);
+             sg[2] = 0.0;
+             sg[3] = -sg[1];
 
-switch(lt) {
-  case 1:
-         sg[1] = 0.0;
-         ag[1] = 2.0;
-         break;
-  case 2:
-         sg[1] = -1/sqrt(3.);
-         sg[2] =  -sg[1];
-         ag[1] = 1.0; 
-         ag[2] = 1.0; 
-         break;
-  case 3:
-         sg[1] = -sqrt(0.6);
-         sg[2] = 0.0;
-         sg[3] = -sg[1];
+             ag[1] = 5.0/9.0; 
+             ag[2] = 8.0/9.0; 
+             ag[3] = ag[1]; 
+             break;
+        case 4:
+             t = sqrt(4.8);
+             sg[1] =  sqrt((3+t)/7);
+             sg[2] =  sqrt((3-t)/7);
+             sg[3] = -sg[2];
+             sg[4] = -sg[1];
 
-         ag[1] = 5.0/9.0; 
-         ag[2] = 8.0/9.0; 
-         ag[3] = ag[1]; 
-         break;
-  case 4:
-         t = sqrt(4.8);
-         sg[1] =  sqrt((3+t)/7);
-         sg[2] =  sqrt((3-t)/7);
-         sg[3] = -sg[2];
-         sg[4] = -sg[1];
-         t  = 1/3/t;
-         ag[1] = 0.5-t; 
-         ag[2] = 0.5+t; 
-         ag[3] = ag[2]; 
-         ag[4] = ag[1]; 
-         break;
-  default:
-         break;
-  }
+             t  = 1/3/t;
+             ag[1] = 0.5-t; 
+             ag[2] = 0.5+t; 
+             ag[3] = ag[2]; 
+             ag[4] = ag[1]; 
+             break;
+        default:
+             break;
+    }
 
-#ifdef DEBUG
-      printf(" In gauss(): \n");
-   for (i = 1; i <= lt; i++) {
-      printf("           : integ_coord[%d] = %lf \n",i, sg[i]);
-      printf("           : weight[%d]      = %lf \n",i, ag[i]);
-   }
-   printf(" ******leaving gauss() \n");
-#endif
-
-  return (1);
+    return (1);
 }
 
-/*====================================================*/
-/* pgauss(no_integ_pts,lint,sg,tg,wg)                 */
-/* input:                                             */
-/*        no_integ_pts   no of gaussian integ pts     */
-/*                       in one-direction             */
-/* output:                                            */
-/*        lint           no_integ_pts*no_integ_pts    */
-/*        sg             coordinates in xi direction  */
-/*        tg             coordinates in eta direction */
-/*        wg             weight coeffcient            */
-/*====================================================*/
+/*
+ *  ============================================================================= 
+ *  pgauss() : 
+ * 
+ *  Input  : int no_integ_pts --  no of gaussian integ pts in one-direction.
+ *  Output : lint             --  no_integ_pts*no_integ_pts  
+ *         :   sg             -- coordinates in xi direction 
+ *         :   tg             -- coordinates in eta direction
+ *         :   wg             -- weighting coefficients
+ *  ============================================================================= 
+ */
 
 int pgauss(l, lint, r, z, w)
 int l, *lint;
@@ -1234,36 +1201,31 @@ lw[9] = 64;
     return(1);
 }
 
-
-/* ========================================== */
-/* pstres                                     */
-/* ========================================== */
+/*
+ *  ===============================================================
+ *  MaterialMatrixPlane() : Compute (3x3) constituitive matrix.
+ *
+ *  Note : Plane Stress : dFlag = 1
+ *         Plane Strain : dFlag = 2
+ *
+ *  Input  : double     E -- Moduus of elasticity.
+ *         : double    nu -- Poisson's ratio
+ *         : double dFlag -- Flag for Plane Strss/Plane Strain Cases
+ *  Output : double **m1  -- Pointer to constituitive matrix.
+ *  ===============================================================
+ */
 
-int pstres(sig,sg4,sg5,sg6)
-double *sig;
-double sg4,sg5,sg6;
-{
-    printf("******In function pstres\n ");
-    return(1);
-}
-
-/*=============================================*/
-/* material matrix                             */
-/*=============================================*/
-double **MATER_MAT_PLANE(E, nu)
-double E, nu;
-{
- 
+double **MaterialMatrixPlane( double E, double nu , double dFlag ) {
 double **m1;
 double temp;
 
     m1 = MatrixAllocIndirectDouble(3, 3);
     
-    temp =  E/(1.0-nu*nu);
+    temp =  E*(1 + ( 1-dFlag)*nu)/(1.0+nu)/(1.0 - dFlag*nu);
 
-    m1[0][0]= m1[1][1] = temp;
-    m1[0][1]= m1[1][0] = nu*temp; 
-    m1[2][2]= E/2.0/(1.0+nu); 
+    m1[0][0] = m1[1][1] = temp;
+    m1[0][1] = m1[1][0] = (nu/(1+(1-dFlag)*nu))*temp; 
+    m1[2][2] = E/2.0/(1.0+nu); 
 
     m1[0][2] = m1[2][0] = m1[1][2] = m1[2][1] = 0.0;
 
@@ -1271,92 +1233,123 @@ double temp;
 }
 
 
-/* =================================================================== */
-/* Calculate Equivalent Nodal Loads                                    */
-/*                                                                     */
-/* These element level procedures determine Eqvivalent Nodal Loads due */
-/* to element loadings. The loads are added directly to nodal loads.   */
-/*                                                                     */
-/*  Negative Eqv (= Fixed end forces) added to local elmt forces       */
-/*   Sign Convention:  P, by,bx,etc positive along Y,X axis            */
-/*   sld01 Equivalent Loading Procedure for 2 D finite element         */
-/* =================================================================== */
+/*
+ *  ==========================================================================
+ *  print_property_psps() : print PLANE_STRAIN/PLANE_STRESS element properties
+ *  ==========================================================================
+ */
 
-ARRAY *sld01( p,task)
-ARRAY *p;
-int task;
+#ifdef __STDC__
+void print_property_psps(EFRAME *frp, int i)
+#else
+void print_property_psps(frp, i)
+EFRAME    *frp;
+int          i;                 /* elmt_attr_no */
+#endif
 {
-ELEMENT         *el;  
-ELEMENT_LOADS  *ell; 
-ELOAD_LIB      *elp; 
+int     UNITS_SWITCH;
+ELEMENT_ATTR    *eap;
 
-double shp[4][10],sg[17],tg[17],wg[17],pq[4],dj[4],xyp[4],xye[4][5];
-double h, dv,dv1,dv2,ax,ay,jacobain;
-int mash,gash,gish,gosh,nash,l,lint,nsfr,lne,ncord,nln;
-int i,j,lnew, k,igauss;
-int no_integ_pts;
+     UNITS_SWITCH = CheckUnits();
+     eap = &frp->eattr[i-1];
 
-    switch(task){
-        case PRESSLD:
-             nsfr  = 2;/* conter for variation type; para =2 */
-             lne   = 4;/* no of element face */
-             ncord = 3;
-             nln = nsfr + 1;
-             ell  =  p->elmt_load_ptr;
-             for(lnew=1;lnew<=lne; lnew++){
-                 h = -1;
-                 for (j=1; j<=nln; j++){
-                      elp  =  &ell->elib_ptr[lnew-1];
-                      mash =   elp->nopl[j];
-                      for(k=1; k<=ncord; k++)
-                          xye[k][j] = p->coord[mash][k].value;
-                 }
+     if( PRINT_MAP_DOF == ON ) {
+        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+           printf("             ");
+           printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+        }
 
-            if(p->nodes_per_elmt == 4) no_integ_pts  =  2;    /* 4-node element */
-            if(p->nodes_per_elmt == 8) no_integ_pts  =  3;    /* 8-node element */
-            l = no_integ_pts;
+        if(frp->no_dof == 6) { /* 3d analysis */
+           printf("             ");
+           printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+           printf("             ");
+           printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
+                           eap->map_ldof_to_gdof[3],
+                           eap->map_ldof_to_gdof[4],
+                           eap->map_ldof_to_gdof[5]);
+        } 
+     }
 
-                 pgauss(l,lint,sg,tg,wg);
-
-                 for(igauss=1;igauss<=lint;igauss++){
-                     shape(sg[igauss],h,p->coord,shp,jacobain,p->no_dimen,p->nodes_per_elmt, p->node_connect,0);
-                     for(i = 1; i <= ncord; i++){
-                         gash = 0;
-                         gosh = 0;
-                         gish = 0;
-                         for (k=1; k<=nln; k++){
-                              if(i<=2){;
-                                 gosh = gosh +   elp->pr->uMatrix.daa[k][i] * shp[3][k];
-                                 gish = gish + xye[i][k] * shp[1][k];
-                              }
-                         }
-                         xyp[i] = gash;
-                         if(i<=2){
-                            pq[i] = gosh;
-                            dj[i] = gish;
-                         }
-
-                     }
-                     dv = wg[igauss];
-                     if(ncord == 3) dv = dv + xyp[3];
-                     if(p->nodes_per_elmt == AXISYM) dv = 6.283185 * xyp[1];
-                        dv1 = dv + dj[1];
-                        dv2 = dv + dj[2];
-                        ay = dv1*pq[1] + dv2*pq[2];
-                        ax = dv1 * pq[2] - dv2 * pq[1];
-                        for (i=1; i<=nln; i++){
-                             nash = p->dof_per_node * ( ell->elib_ptr[lnew -1].nopl[i] - 1)  + 2; 
-                             mash = nash -1;
-                             F[mash] = F[mash] + shp[3][i] * ax;
-                             F[nash] = F[nash] + shp[3][i] * ay;
-                        }
-                 }
-            }
-            break;
-       default:
-            break;
-    }
-
-    return(p);
-
+     switch(UNITS_SWITCH) {
+       case ON:
+        UnitsSimplify( eap->work_material[0].dimen );
+        UnitsSimplify( eap->work_material[2].dimen );
+        UnitsSimplify( eap->work_material[5].dimen );
+        UnitsSimplify( eap->work_section[2].dimen );
+        UnitsSimplify( eap->work_section[10].dimen );
+        if( eap->work_material[0].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e %s\n",
+                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
+                           eap->work_material[0].dimen->units_name);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[2].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e %s\n",
+                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
+                           eap->work_material[2].dimen->units_name);
+        }
+	if( eap->work_material[5].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Density         = %16.3e %s\n",
+                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
+                           eap->work_material[5].dimen->units_name);
+	}
+	if( eap->work_section[2].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Inertia Izz     = %16.3e %s\n",
+                           eap->work_section[2].value/eap->work_section[2].dimen->scale_factor,
+                           eap->work_section[2].dimen->units_name);
+	}
+	if( eap->work_section[10].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Area            = %16.3e %s\n",
+                           eap->work_section[10].value/eap->work_section[10].dimen->scale_factor,
+                           eap->work_section[10].dimen->units_name);
+	}
+       break;
+       case OFF:
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e\n",
+                            eap->work_material[0].value);
+        }
+        if( eap->work_material[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e\n",
+                            eap->work_material[2].value);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Density         = %16.3e\n",
+                            eap->work_material[5].value);
+        }
+        if( eap->work_section[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Inertia Izz     = %16.3e\n",
+                            eap->work_section[2].value);
+        }
+        if( eap->work_section[10].value != 0.0 ) {
+           printf("             ");
+           printf("         : Area            = %16.3e\n",
+                            eap->work_section[10].value);
+        }
+        break;
+        default:
+        break;
+     }
 }

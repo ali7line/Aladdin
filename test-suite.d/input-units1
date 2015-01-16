@@ -1,8 +1,100 @@
-/*  =======================================================  */
-/*  VARIBALE WITH UNITS II                                   */
-/*  This input file tests the variables with different Units */
-/*  =======================================================  */
- 
+/* =====================================================================  */
+/* This input file tests the variables with different Units               */
+/* =====================================================================  */
+
+print  "\n";
+print  "========================================================\n";
+print  "This input file tests the variables with different units\n";
+print  "========================================================\n\n";
+
+/* UNITS of LENGTH     */
+/* case 1: SI system   */
+
+print " LENGTH UNITS : SI \n";
+x =  1 mm;
+y =  1 cm;
+z =  1 dm;
+u =  1  m;
+v =  1 km;
+
+print  "x = ", x, "\n";
+print  "y = ", y, "\n";
+print  "z = ", z, "\n";
+print  "u = ", u, "\n";
+print  "v = ", v, "\n";
+
+w = x + y + z + u + v;
+print "w = ", w, "\n";
+w = y + z + u + v + x;
+print "w = ", w, "\n";
+
+/* case 2: US system   */
+
+print "\n LENGTH UNITS : US \n";
+x =  1       in;
+y =  1      mil;
+z =  1 micro_in;
+u =  1       ft;
+v =  1     yard;
+w =  1     mile;
+
+
+print  "x = ", x, "\n";
+print  "y = ", y, "\n";
+print  "z = ", z, "\n";
+print  "u = ", u, "\n";
+print  "v = ", v, "\n";
+print  "w = ", w, "\n";
+
+W = x + y + z + u + v + w;
+print "W = ", W, "\n";
+
+W = y + z + u + v + w + x;
+print "W = ", W, "\n";
+
+/* ====================*/
+/* UNITS of VOLUME     */
+/* ====================*/
+
+print "\n VOLUME UNITS : US \n";
+x =  1       gallon;
+y =  1       barrel;
+print  "x = ", x, "\n";
+print  "y = ", y, "\n";
+
+/* ====================*/
+/* UNITS of MASS       */
+/* ====================*/
+
+/* case 1: SI system   */
+
+print "\n MASS UNITS : SI \n";
+x = 1 g;
+y = 1 kg;
+z = 1 Mg;
+print  "x = ", x, "\n";
+print  "y = ", y, "\n";
+print  "z = ", z, "\n";
+
+W = x + y + z;
+print "W = ", W, "\n";
+
+/* case 2: US system   */
+
+print "\n MASS UNITS : US \n";
+
+x = 1 lb;
+y = 1 grain;
+z = 1 klb;
+u = 1 ton;
+print  "x = ", x, "\n";
+print  "y = ", y, "\n";
+print  "z = ", z, "\n";
+print  "u = ", u, "\n";
+
+W = x + y + z + u;
+print "W = ", W, "\n";
+
 /* ====================*/
 /* UNITS of TIME       */
 /* ====================*/
@@ -26,6 +118,7 @@ print "w = ", w, "\n";
 /* =====================*/
 /* UNITS of TEMPERATURE */
 /* =====================*/
+
 /* case 1: SI system   */
 
 print "\n TEMPERATURE UNITS : SI \n";
@@ -82,6 +175,7 @@ print "W = ", W, "\n";
 /* ===========================*/
 
 print "\n PRESSURE UNITS : SI \n";
+
 x =  1   Pa;
 y =  1  kPa;
 z =  1  MPa;
@@ -95,6 +189,7 @@ w = u + z + y + x ;
 print "w = ", w, "\n";
 
 print "\n PRESSURE UNITS : US \n";
+
 x =  1  psi;
 y =  1  ksi;
 
@@ -119,6 +214,7 @@ print "w = ", w, "\n";
 /* ===========================*/
 /* UNITS of POWER             */
 /* ===========================*/
+
 print "\n POWER UNITS : SI \n";
 x =  1 Watt;
 y =  1  kW;
@@ -131,6 +227,7 @@ print "w = ", w, "\n";
 /* ===========================*/
 /* UNITS of PLANE ANGLE       */
 /* ===========================*/
+
 print "\n PLANE ANGLE UNITS \n";
 x =  1 deg;
 y =  1 rad;
@@ -154,3 +251,10 @@ print  "                 x = ", x, "\n";
 print  "                 y = ", y, "\n";
 print  "DimensionLess of x = ", z, "\n";
 print  "DimensionLess of y = ", u, "\n";
+
+print "\n";
+print "=============\n";
+print "Test Complete\n";
+print "=============\n";
+
+quit;

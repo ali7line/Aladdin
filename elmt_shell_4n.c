@@ -36,20 +36,17 @@
 #include <math.h>
 
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "vector.h"
 #include "fe_database.h"
-#include "symbol.h"
 #include "fe_functions.h"
 #include "elmt.h"
-#include "miscellaneous.h"
 
-/*
-#define DEBUG 
-#define DEBUG1
-#define DEBUG3
-*/
+/* function declarations */
+
+ARRAY *sld04( ARRAY *, int );
 
 
 /* ============================================================== */
@@ -81,19 +78,19 @@
       p->work_section[11] = thickness;                            */
 /* ============================================================== */
 
-ARRAY *elmt_shell(p, isw)
+ARRAY *elmt_shell_4n(p, isw)
 ARRAY    *p;
 int     isw;
 {
 
 #ifdef DEBUG
-       printf(" enter elmt_shell() \n");
+       printf(" enter elmt_shell_4n() \n");
 #endif
 
    p = elmt_shell_4nodes_implicit(p, isw);
 
 #ifdef DEBUG
-       printf(" Leaving elmt_shell() \n");
+       printf(" Leaving elmt_shell_4n() \n");
 #endif
 
    return(p);
@@ -134,7 +131,7 @@ double                      **Cep, **stiff, **mass;
 int         i, j, k, ii, jj, kk, n, n1, n2, k1, k2;
 int      surface_pts, surf_integ_pts, no_integ_pts;
 int            size, dof, length, length1, length2;
-int                                   UNITS_SWITCH;
+int                        UNITS_SWITCH, UnitsType;
 
 
 #ifdef DEBUG
@@ -148,6 +145,8 @@ int                                   UNITS_SWITCH;
 /* =======================================================*/
      
        UNITS_SWITCH = CheckUnits();
+       UnitsType    = CheckUnitsType();
+
        co_coord         = MatrixAllocIndirectDouble(p->no_dimen, p->nodes_per_elmt);
        Direction_Matrix = MatrixAllocIndirectDouble(6,6);
 
@@ -381,7 +380,7 @@ int                                   UNITS_SWITCH;
 
        switch( UNITS_SWITCH ) {
          case ON:
-           if(UNITS_TYPE == SI || UNITS_TYPE == SI_US ) {
+           if(UnitsType == SI || UnitsType == SI_US ) {
               dp_stress = DefaultUnits("Pa");
               dp_length = DefaultUnits("m");
            }
@@ -500,11 +499,11 @@ int                                   UNITS_SWITCH;
       UNITS_SWITCH = CheckUnits();
       switch( UNITS_SWITCH ) {
         case ON:
-         if(UNITS_TYPE == SI) {
+         if(UnitsType == SI) {
             dp_length = DefaultUnits("m");
             dp_force  = DefaultUnits("N");
          }
-         if(UNITS_TYPE == US) {
+         if(UnitsType == US) {
             dp_length = DefaultUnits("in");
             dp_force  = DefaultUnits("lbf");
          }
@@ -670,7 +669,7 @@ int                                   UNITS_SWITCH;
 
      switch( UNITS_SWITCH ) {
        case ON:
-          if(UNITS_TYPE == SI || UNITS_TYPE == SI_US ) {
+          if(UnitsType == SI || UnitsType == SI_US ) {
               dp_force  = DefaultUnits("N");
               dp_length = DefaultUnits("m");
           }
@@ -744,6 +743,116 @@ printf("*** In elmt_shell_4nodes_implicit() : end case LOAD_MATRIX, STRESS_UPDAT
     return(p);
 }
 
+/* Print SHELL_4N Element Properties */
+#ifdef __STDC__
+void print_property_shell_4n(EFRAME *frp, int i)
+#else
+void print_property_shell_4n(frp, i)
+EFRAME    *frp;
+int          i;                 /* elmt_attr_no */
+#endif
+{
+int     UNITS_SWITCH;
+ELEMENT_ATTR    *eap;
+
+#ifdef DEBUG
+       printf("*** Enter print_property_shell_4n()\n");
+#endif
+
+     UNITS_SWITCH = CheckUnits();
+     eap = &frp->eattr[i-1];
+
+     if( PRINT_MAP_DOF == ON ) {
+        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+           printf("             ");
+           printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+        }
+
+        if(frp->no_dof == 6) { /* 3d analysis */
+           printf("             ");
+           printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+           printf("             ");
+           printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
+                           eap->map_ldof_to_gdof[3],
+                           eap->map_ldof_to_gdof[4],
+                           eap->map_ldof_to_gdof[5]);
+        } 
+     }
+
+     switch(UNITS_SWITCH) {
+       case ON:
+        UnitsSimplify( eap->work_material[0].dimen );
+        UnitsSimplify( eap->work_material[2].dimen );
+        UnitsSimplify( eap->work_material[5].dimen );
+        UnitsSimplify( eap->work_section[2].dimen );
+        UnitsSimplify( eap->work_section[10].dimen );
+        if( eap->work_material[0].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e %s\n",
+                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
+                           eap->work_material[0].dimen->units_name);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[2].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e %s\n",
+                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
+                           eap->work_material[2].dimen->units_name);
+        }
+	if( eap->work_material[5].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Density         = %16.3e %s\n",
+                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
+                           eap->work_material[5].dimen->units_name);
+	}
+	if( eap->work_section[2].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Inertia Izz     = %16.3e %s\n",
+                           eap->work_section[2].value/eap->work_section[2].dimen->scale_factor,
+                           eap->work_section[2].dimen->units_name);
+	}
+	if( eap->work_section[10].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Area            = %16.3e %s\n",
+                           eap->work_section[10].value/eap->work_section[10].dimen->scale_factor,
+                           eap->work_section[10].dimen->units_name);
+	}
+       break;
+       case OFF:
+         printf("             ");
+         printf("         : Young's Modulus =  E = %16.3e\n",
+                            eap->work_material[0].value);
+         printf("             ");
+         printf("         : Yielding Stress = fy = %16.3e\n",
+                            eap->work_material[2].value);
+         printf("             ");
+         printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+         printf("             ");
+         printf("         : Density         = %16.3e\n",
+                            eap->work_material[5].value);
+         printf("             ");
+         printf("         : Inertia Izz     = %16.3e\n",
+                            eap->work_section[2].value);
+         printf("             ");
+         printf("         : Area            = %16.3e\n",
+                            eap->work_section[10].value);
+        break;
+        default:
+        break;
+     }
+#ifdef DEBUG
+       printf("*** Leave print_property_shell_4n()\n");
+#endif
+}
 
 /* ============================================*/
 /* Equivalent Load due to distributed pressure */
@@ -1495,7 +1604,7 @@ DIMENSIONS                               *dimen;
   /* ASSIGN UNITS TO p ARRAY */
   
    if(CheckUnits() == ON) {
-         switch(UNITS_TYPE) {
+         switch(CheckUnitsType()) {
            case SI:
              dimen = DefaultUnits("Pa");
            break;
@@ -2102,7 +2211,7 @@ double               Aera, elmt_length, width;
 double            node_mass, node_Jx, node_Jy;
 
 DIMENSIONS                      *d1, *d2, *d3;
-int                              UNITS_SWITCH;
+int                   UNITS_SWITCH, UnitsType;
 
 #ifdef DEBUG
        printf("*** Enter Shell_4Node_Mass(): \n");
@@ -2270,9 +2379,10 @@ int                              UNITS_SWITCH;
  /* Initiation of Mass Units Buffer                      */
 
       UNITS_SWITCH = CheckUnits();
+      UnitsType    = CheckUnitsType();
       switch( UNITS_SWITCH ) {
         case ON:
-           if(UNITS_TYPE == SI || UNITS_TYPE == SI_US ) {
+           if(UnitsType == SI || UnitsType == SI_US ) {
               d1 = DefaultUnits("Pa");
               d2 = DefaultUnits("m");
            }

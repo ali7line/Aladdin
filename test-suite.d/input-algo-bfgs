@@ -15,6 +15,11 @@
  *  ===================================================== 
  */ 
 
+print "\n";
+print "===================================================\n";
+print "*** Use BFGS Algorithm to Solve Nonlinear Equations\n";
+print "===================================================\n\n";
+
 dimen = 2;
 IMAX  = 20;     /* Maximum number of iteration */
 Ef    = 1E-4;
@@ -143,4 +148,10 @@ MaxLineSearchCount = 5;
     Y          = [2*x[1][1], 1; 1, 2*x[2][1]];
     F          = Y*x;
     PrintMatrix(x, F);
+
+    print "\n";
+    print "========================\n";
+    print "*** End of bfgs analysis\n";
+    print "========================\n";
+
     quit;

@@ -64,250 +64,250 @@ typedef struct matrix {
 
 #ifdef __STDC__ 
 
-extern MATRIX *MatrixAllocate( MATRIX * );
-extern MATRIX *MatrixDiag( MATRIX * );
-extern MATRIX *MatrixZero( MATRIX * );
-extern MATRIX *MatrixOne( MATRIX * );
-extern MATRIX *MatrixAdd( MATRIX * , MATRIX * );
-extern MATRIX *MatrixAddReplace( MATRIX *, MATRIX * );
-extern MATRIX *MatrixSub( MATRIX * , MATRIX * );
-extern MATRIX *MatrixSubReplace( MATRIX *, MATRIX * );
-extern MATRIX *MatrixMult( MATRIX * , MATRIX * );
-extern MATRIX *MatrixPower( MATRIX * , QUANTITY * );
-extern MATRIX *MatrixNegate( MATRIX * );
-extern MATRIX *MatrixNegateReplace( MATRIX *);
-extern MATRIX *MatrixTranspose( MATRIX * );
-extern MATRIX *MatrixCopy( MATRIX * );
-extern MATRIX *MatrixSolve( MATRIX *, MATRIX * );
-extern MATRIX *MatrixLU( MATRIX * );
-extern MATRIX *MatrixFB( MATRIX *, MATRIX * );
-extern MATRIX *MatrixInverse( MATRIX * );
-extern MATRIX *MatrixDimension( MATRIX * );
-extern MATRIX *MatrixScale( MATRIX *, double );
-extern double  MatrixContentScale( MATRIX *, int, int );
-extern MATRIX *MatrixQuanMult( QUANTITY *, MATRIX * );
-extern MATRIX *MatrixQuanDiv( MATRIX * , QUANTITY * );
-extern MATRIX *MatrixZeroUnits( MATRIX *, int, int );
-extern MATRIX *MatrixUnitsLess( MATRIX * );
-extern MATRIX *MatrixUnitsSimplify( MATRIX * );
+MATRIX *MatrixAllocate( MATRIX * );
+MATRIX *MatrixDiag( MATRIX * );
+MATRIX *MatrixZero( MATRIX * );
+MATRIX *MatrixOne( MATRIX * );
+MATRIX *MatrixAdd( MATRIX * , MATRIX * );
+MATRIX *MatrixAddReplace( MATRIX *, MATRIX * );
+MATRIX *MatrixSub( MATRIX * , MATRIX * );
+MATRIX *MatrixSubReplace( MATRIX *, MATRIX * );
+MATRIX *MatrixMult( MATRIX * , MATRIX * );
+MATRIX *MatrixPower( MATRIX * , QUANTITY * );
+MATRIX *MatrixNegate( MATRIX * );
+MATRIX *MatrixNegateReplace( MATRIX *);
+MATRIX *MatrixTranspose( MATRIX * );
+MATRIX *MatrixCopy( MATRIX * );
+MATRIX *MatrixSolve( MATRIX *, MATRIX * );
+MATRIX *MatrixLU( MATRIX * );
+MATRIX *MatrixFB( MATRIX *, MATRIX * );
+MATRIX *MatrixInverse( MATRIX * );
+MATRIX *MatrixDimension( MATRIX * );
+MATRIX *MatrixScale( MATRIX *, double );
+double  MatrixContentScale( MATRIX *, int, int );
+MATRIX *MatrixQuanMult( QUANTITY *, MATRIX * );
+MATRIX *MatrixQuanDiv( MATRIX * , QUANTITY * );
+MATRIX *MatrixZeroUnits( MATRIX *, int, int );
+MATRIX *MatrixUnitsLess( MATRIX * );
+MATRIX *MatrixUnitsSimplify( MATRIX * );
 
-extern MATRIX *MatrixPrintVar( MATRIX *, ... );
-extern MATRIX *MatrixPrint( MATRIX *, ... );
-extern MATRIX *MatrixColumnUnits( MATRIX *, ... );
-extern MATRIX *MatrixRowUnits( MATRIX *, ... );
-extern MATRIX *MatrixExtract( MATRIX *, ... );
-extern MATRIX *MatrixPut( MATRIX *, ... );
+MATRIX *MatrixPrintVar( MATRIX *, ... );
+MATRIX *MatrixPrintCast( MATRIX *, ... );
+MATRIX *MatrixColumnUnits( MATRIX *, ... );
+MATRIX *MatrixRowUnits( MATRIX *, ... );
+MATRIX *MatrixExtract( MATRIX *, ... );
+MATRIX *MatrixPut( MATRIX *, ... );
 
-extern void      MatrixFree( MATRIX * );
-extern QUANTITY *MatrixDet( MATRIX * );
-extern QUANTITY *MatrixMax( MATRIX * );
-extern QUANTITY *MatrixMin( MATRIX * );
-extern QUANTITY *MatrixL2Norm( MATRIX * );
-extern QUANTITY *QuantityCast( MATRIX * );
+void      MatrixFree( MATRIX * );
+QUANTITY *MatrixDet( MATRIX * );
+QUANTITY *MatrixMax( MATRIX * );
+QUANTITY *MatrixMin( MATRIX * );
+QUANTITY *MatrixL2Norm( MATRIX * );
+QUANTITY *QuantityCast( MATRIX * );
 
 /* [c] : Matrix Functions with INDIRECT Storage Pattern */
 
-extern MATRIX   *MatrixAllocIndirect( char *, DATA_TYPE , int , int );
-extern double  **MatrixAllocIndirectDouble( int, int );
-extern int     **MatrixAllocIndirectInteger( int, int );
-extern void      MatrixFreeIndirectDouble( double **, int );
-extern void      MatrixFreeIndirectInteger( int **, int );
+MATRIX   *MatrixAllocIndirect( char *, DATA_TYPE , int , int );
+double  **MatrixAllocIndirectDouble( int, int );
+int     **MatrixAllocIndirectInteger( int, int );
+void      MatrixFreeIndirectDouble( double **, int );
+void      MatrixFreeIndirectInteger( int **, int );
 
-extern void    MatrixPrintIndirectDouble( MATRIX * );
-extern void    MatrixPrintIndirectInteger( MATRIX * );
+void    MatrixPrintIndirectDouble( MATRIX * );
+void    MatrixPrintIndirectInteger( MATRIX * );
 
-extern MATRIX *MatrixCopyIndirectDouble( MATRIX * );
-extern MATRIX *MatrixAddIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixAddReplaceIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixSubIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixSubReplaceIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixMultIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixMultIndirectSkylineDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixMultSkylineIndirectDouble( MATRIX *, MATRIX *);
-extern MATRIX *MatrixNegateIndirectDouble( MATRIX * );
-extern MATRIX *MatrixNegateReplaceIndirectDouble( MATRIX * );
+MATRIX *MatrixCopyIndirectDouble( MATRIX * );
+MATRIX *MatrixAddIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixAddReplaceIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixSubIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixSubReplaceIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixMultIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixMultIndirectSkylineDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixMultSkylineIndirectDouble( MATRIX *, MATRIX *);
+MATRIX *MatrixNegateIndirectDouble( MATRIX * );
+MATRIX *MatrixNegateReplaceIndirectDouble( MATRIX * );
 
-extern MATRIX *MatrixTransposeIndirectDouble( MATRIX * );
-extern MATRIX *MatrixInverseIndirectDouble( MATRIX * );
-extern MATRIX *MatrixScaleIndirectDouble( MATRIX *, double );
-extern double  MatrixContentScaleIndirectDouble( MATRIX *, int, int );
+MATRIX *MatrixTransposeIndirectDouble( MATRIX * );
+MATRIX *MatrixInverseIndirectDouble( MATRIX * );
+MATRIX *MatrixScaleIndirectDouble( MATRIX *, double );
+double  MatrixContentScaleIndirectDouble( MATRIX *, int, int );
 
 /* [d] : Matrix Functions with SKYLINE Storage Pattern */
 
-extern MATRIX *MatrixAllocSkyline( char *, DATA_TYPE, int, int, int *);
-extern void    MatrixFreeSkyline( MATRIX * );
-extern void    MatrixPrintSkylineDouble( MATRIX * );
+MATRIX *MatrixAllocSkyline( char *, DATA_TYPE, int, int, int *);
+void    MatrixFreeSkyline( MATRIX * );
+void    MatrixPrintSkylineDouble( MATRIX * );
 
-extern MATRIX *MatrixReallocSkyline( MATRIX * );
-extern MATRIX *MatrixReallocSkylineDouble( MATRIX * );
+MATRIX *MatrixReallocSkyline( MATRIX * );
+MATRIX *MatrixReallocSkylineDouble( MATRIX * );
 
-extern MATRIX *MatrixAddSkyline( MATRIX *, MATRIX * );
-extern MATRIX *MatrixSubSkyline( MATRIX *, MATRIX * );
-extern MATRIX *MatrixMultSkyline( MATRIX *, MATRIX *);
-extern MATRIX *MatrixNegateSkyline( MATRIX *);
-extern MATRIX *MatrixNegateReplaceSkyline( MATRIX * );
-extern MATRIX *MatrixCopySkyline( MATRIX * );
-extern MATRIX *MatrixTransposeSkyline( MATRIX * );
-extern MATRIX *MatrixInverseSkyline( MATRIX * );
-extern MATRIX *MatrixScaleSkyline( MATRIX *, double );
-extern double  MatrixContentScaleSkyline( MATRIX *, int, int );
+MATRIX *MatrixAddSkyline( MATRIX *, MATRIX * );
+MATRIX *MatrixSubSkyline( MATRIX *, MATRIX * );
+MATRIX *MatrixMultSkyline( MATRIX *, MATRIX *);
+MATRIX *MatrixNegateSkyline( MATRIX *);
+MATRIX *MatrixNegateReplaceSkyline( MATRIX * );
+MATRIX *MatrixCopySkyline( MATRIX * );
+MATRIX *MatrixTransposeSkyline( MATRIX * );
+MATRIX *MatrixInverseSkyline( MATRIX * );
+MATRIX *MatrixScaleSkyline( MATRIX *, double );
+double  MatrixContentScaleSkyline( MATRIX *, int, int );
 
-extern MATRIX *LUDecompositionSkyline( MATRIX *);
-extern MATRIX *LUBacksubstitutionSkyline( MATRIX *, MATRIX *);
+MATRIX *LUDecompositionSkyline( MATRIX *);
+MATRIX *LUBacksubstitutionSkyline( MATRIX *, MATRIX *);
 
-extern MATRIX *MatrixIndirectToSkyline( MATRIX * );
-extern MATRIX *MatrixSkylineToIndirect( MATRIX * );
+MATRIX *MatrixIndirectToSkyline( MATRIX * );
+MATRIX *MatrixSkylineToIndirect( MATRIX * );
 
-extern MATRIX *MatrixAssembleSkyline( MATRIX *, MATRIX *, int *, int * );
-extern MATRIX *CholeskyDecompositionIndirect( MATRIX * );
+MATRIX *MatrixAssembleSkyline( MATRIX *, MATRIX *, int *, int * );
+MATRIX *CholeskyDecompositionIndirect( MATRIX * );
 
-extern void    MatrixSolveEigen( MATRIX *, MATRIX *, MATRIX *, MATRIX *, int );
-extern MATRIX *Solve_Eigen( MATRIX *, MATRIX *, MATRIX * );
-extern MATRIX *Extract_Eigenvalue( MATRIX * );
-extern MATRIX *Extract_Eigenvector( MATRIX * );
-extern void    Print_Eigen( MATRIX * );
+void    MatrixSolveEigen( MATRIX *, MATRIX *, MATRIX *, MATRIX *, int );
+MATRIX *Solve_Eigen( MATRIX *, MATRIX *, MATRIX * );
+MATRIX *Extract_Eigenvalue( MATRIX * );
+MATRIX *Extract_Eigenvector( MATRIX * );
+void    Print_Eigen( MATRIX * );
 
-extern void         dMatrixPrint( char *, double **, int, int );
-extern double     **dMatrixCopy( double **, int, int );
-extern double     **dMatrixCopyRep( double **, double **, int, int );
-extern double     **dVmatrixCrossProduct( double **, double **, int, int, double **, int, int );
-extern double       dVmatrixInnerProduct( double **, int, int, double **, int, int );
-extern double     **dMatrixMult( double **, int, int, double **, int, int );
-extern double     **dMatrixMultRep( double **, double **, int, int, double **, int, int );
-extern double     **dMatrixTranspose( double **, int, int );
-extern double       dVmatrixL2Norm( double **, int, int );
-extern double       dMatrixDet( double **, int, int );
+void         dMatrixPrint( char *, double **, int, int );
+double     **dMatrixCopy( double **, int, int );
+double     **dMatrixCopyRep( double **, double **, int, int );
+double     **dVmatrixCrossProduct( double **, double **, int, int, double **, int, int );
+double       dVmatrixInnerProduct( double **, int, int, double **, int, int );
+double     **dMatrixMult( double **, int, int, double **, int, int );
+double     **dMatrixMultRep( double **, double **, int, int, double **, int, int );
+double     **dMatrixTranspose( double **, int, int );
+double       dVmatrixL2Norm( double **, int, int );
+double       dMatrixDet( double **, int, int );
 
 #else  /* start case not STDC */
 
 /* [b] : Declarations for Root Matrix Functions */
 
-extern MATRIX *MatrixPrint();
-extern MATRIX *MatrixPrintVar();
-extern MATRIX *MatrixAllocate();
-extern MATRIX *MatrixDiag();
-extern MATRIX *MatrixZero();
-extern MATRIX *MatrixOne();
-extern MATRIX *MatrixScale();
-extern double  MatrixContentScale();
-extern MATRIX *MatrixCopy();
-extern MATRIX *MatrixTranspose();
-extern MATRIX *MatrixDimension();
-extern MATRIX *MatrixAdd();
-extern MATRIX *MatrixAddReplace();
-extern MATRIX *MatrixSub();
-extern MATRIX *MatrixSubReplace();
-extern MATRIX *MatrixMult();
-extern MATRIX *MatrixPower();
-extern MATRIX *MatrixNegate();
-extern MATRIX *MatrixNegateReplace();
-extern void    MatrixFree();
-extern MATRIX *MatrixSolve();
-extern MATRIX *MatrixLU();
-extern MATRIX *MatrixFB();
-extern void    MatrixSolveEigen();
-extern MATRIX *MatrixInverse();
-extern QUANTITY  *MatrixDet();
-extern QUANTITY  *MatrixL2Norm();
-extern QUANTITY  *MatrixMax();
-extern QUANTITY  *MatrixMin();
+MATRIX *MatrixPrintCast();
+MATRIX *MatrixPrintVar();
+MATRIX *MatrixAllocate();
+MATRIX *MatrixDiag();
+MATRIX *MatrixZero();
+MATRIX *MatrixOne();
+MATRIX *MatrixScale();
+double  MatrixContentScale();
+MATRIX *MatrixCopy();
+MATRIX *MatrixTranspose();
+MATRIX *MatrixDimension();
+MATRIX *MatrixAdd();
+MATRIX *MatrixAddReplace();
+MATRIX *MatrixSub();
+MATRIX *MatrixSubReplace();
+MATRIX *MatrixMult();
+MATRIX *MatrixPower();
+MATRIX *MatrixNegate();
+MATRIX *MatrixNegateReplace();
+void    MatrixFree();
+MATRIX *MatrixSolve();
+MATRIX *MatrixLU();
+MATRIX *MatrixFB();
+void    MatrixSolveEigen();
+MATRIX *MatrixInverse();
+QUANTITY  *MatrixDet();
+QUANTITY  *MatrixL2Norm();
+QUANTITY  *MatrixMax();
+QUANTITY  *MatrixMin();
 
 /* [b.1] : Operations between MATRIX and QUANTITY */
 
-extern MATRIX *MatrixQuanMult();
-extern MATRIX *MatrixQuanDiv();
+MATRIX *MatrixQuanMult();
+MATRIX *MatrixQuanDiv();
 
 /* [b.2] : Declarations for Matrix Functions about Units */
 
-extern MATRIX      *MatrixColumnUnits();
-extern MATRIX      *MatrixRowUnits();
-extern MATRIX      *MatrixZeroUnits();
-extern MATRIX      *MatrixUnitsSimplify();
-extern MATRIX      *MatrixUnitsLess();
-extern MATRIX      *MatrixExtract();
-extern MATRIX      *MatrixPut();
-extern QUANTITY    *QuantityCast();
+MATRIX      *MatrixColumnUnits();
+MATRIX      *MatrixRowUnits();
+MATRIX      *MatrixZeroUnits();
+MATRIX      *MatrixUnitsSimplify();
+MATRIX      *MatrixUnitsLess();
+MATRIX      *MatrixExtract();
+MATRIX      *MatrixPut();
+QUANTITY    *QuantityCast();
 
 
 /* [c] : Matrix Functions with INDIRECT Storage Pattern */
 
-extern MATRIX  *MatrixAllocIndirect();
-extern double **MatrixAllocIndirectDouble();
-extern int    **MatrixAllocIndirectInteger();
+MATRIX  *MatrixAllocIndirect();
+double **MatrixAllocIndirectDouble();
+int    **MatrixAllocIndirectInteger();
 
-extern void     MatrixFreeIndirectDouble();
-extern void     MatrixFreeIndirectInteger();
+void     MatrixFreeIndirectDouble();
+void     MatrixFreeIndirectInteger();
 
-extern MATRIX *MatrixCopyIndirectDouble();
-extern MATRIX *MatrixScaleIndirectDouble();
-extern double  MatrixContentScaleIndirectDouble();
+MATRIX *MatrixCopyIndirectDouble();
+MATRIX *MatrixScaleIndirectDouble();
+double  MatrixContentScaleIndirectDouble();
 
-extern MATRIX *MatrixAddIndirectDouble();
-extern MATRIX *MatrixAddReplaceIndirectDouble();
-extern MATRIX *MatrixSubIndirectDouble();
-extern MATRIX *MatrixSubReplaceIndirectDouble();
-extern MATRIX *MatrixNegateIndirectDouble();
-extern MATRIX *MatrixNegateReplaceIndirectDouble();
+MATRIX *MatrixAddIndirectDouble();
+MATRIX *MatrixAddReplaceIndirectDouble();
+MATRIX *MatrixSubIndirectDouble();
+MATRIX *MatrixSubReplaceIndirectDouble();
+MATRIX *MatrixNegateIndirectDouble();
+MATRIX *MatrixNegateReplaceIndirectDouble();
 
-extern MATRIX *MatrixMultIndirectDouble();
-extern MATRIX *MatrixTransposeIndirectDouble();
+MATRIX *MatrixMultIndirectDouble();
+MATRIX *MatrixTransposeIndirectDouble();
 
-extern MATRIX *LUDecompositionIndirect();
-extern MATRIX *LUSubstitutionIndirect();
+MATRIX *LUDecompositionIndirect();
+MATRIX *LUSubstitutionIndirect();
 
-extern MATRIX *MatrixInverseIndirectDouble();
+MATRIX *MatrixInverseIndirectDouble();
 
 /* [d] : Matrix Functions with SKYLINE Storage Pattern */
 
-extern MATRIX *MatrixAllocSkyline();
-extern void    MatrixPrintSkylineDouble();
-extern void    MatrixFreeSkyline();
+MATRIX *MatrixAllocSkyline();
+void    MatrixPrintSkylineDouble();
+void    MatrixFreeSkyline();
 
-extern MATRIX *ReSkyMatrix();
-extern MATRIX *ReSkyMatrixDouble();
+MATRIX *ReSkyMatrix();
+MATRIX *ReSkyMatrixDouble();
 
-extern MATRIX *MatrixAddSkyline();
-extern MATRIX *MatrixSubSkyline();
-extern MATRIX *MatrixMultSkyline();
-extern MATRIX *MatrixNegateSkyline();
-extern MATRIX *MatrixNegateReplaceSkyline();
+MATRIX *MatrixAddSkyline();
+MATRIX *MatrixSubSkyline();
+MATRIX *MatrixMultSkyline();
+MATRIX *MatrixNegateSkyline();
+MATRIX *MatrixNegateReplaceSkyline();
 
-extern MATRIX *MatrixMultIndirectSkylineDouble();
-extern MATRIX *MatrixMultSkylineIndirectDouble();
+MATRIX *MatrixMultIndirectSkylineDouble();
+MATRIX *MatrixMultSkylineIndirectDouble();
 
-extern MATRIX *MatrixCopySkyline();
-extern MATRIX *MatrixScaleSkyline();
-extern double  MatrixContentScaleSkyline();
+MATRIX *MatrixCopySkyline();
+MATRIX *MatrixScaleSkyline();
+double  MatrixContentScaleSkyline();
 
-extern MATRIX *LUDecompositionSkyline();
-extern MATRIX *LUBacksubstitutionSkyline();
+MATRIX *LUDecompositionSkyline();
+MATRIX *LUBacksubstitutionSkyline();
 
-extern MATRIX *MatrixTransposeSkyline();
-extern MATRIX *MatrixInverseSkyline();
+MATRIX *MatrixTransposeSkyline();
+MATRIX *MatrixInverseSkyline();
 
-extern MATRIX *MatrixIndirectToSkyline();
-extern MATRIX *MatrixSkylineToIndirect();
+MATRIX *MatrixIndirectToSkyline();
+MATRIX *MatrixSkylineToIndirect();
 
-extern MATRIX *MatrixAssembleSkyline();
-extern MATRIX *CholeskyDecompositionIndirect();
+MATRIX *MatrixAssembleSkyline();
+MATRIX *CholeskyDecompositionIndirect();
 
-extern MATRIX *Solve_Eigen();
-extern MATRIX *Extract_Eigenvalue();
-extern MATRIX *Extract_Eigenvector();
-extern void    Print_Eigen();
+MATRIX *Solve_Eigen();
+MATRIX *Extract_Eigenvalue();
+MATRIX *Extract_Eigenvector();
+void    Print_Eigen();
 
 /* [e] : Declarations for Double Matrix (without units) Functions */
 
-extern void         dMatrixPrint();
-extern double     **dMatrixCopy();
-extern double     **dMatrixCopyRep();
-extern double     **dVmatrixCrossProduct();
-extern double       dVmatrixInnerProduct();
-extern double     **dMatrixMult();
-extern double     **dMatrixMultRep();
-extern double     **dMatrixTranspose();
-extern double       dVmatrixL2Norm();
-extern double       dMatrixDet();
+void         dMatrixPrint();
+double     **dMatrixCopy();
+double     **dMatrixCopyRep();
+double     **dVmatrixCrossProduct();
+double       dVmatrixInnerProduct();
+double     **dMatrixMult();
+double     **dMatrixMultRep();
+double     **dMatrixTranspose();
+double       dVmatrixL2Norm();
+double       dMatrixDet();
 
 #endif /* end case not STDC */
 

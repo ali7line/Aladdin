@@ -1,0 +1,336 @@
+elmt_fiber2d.c:     eap = &frp->eattr[i-1];
+elmt_fiber2d.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_fiber2d.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_fiber2d.c:    /* frame->element[elmt_no-1]->rp->Q_saved, q_saved will update automatically. */
+elmt_fiber3d.c:     eap = &frp->eattr[i-1];
+elmt_fiber3d.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_fiber3d.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_fiber3d.c:    /* frame->element[elmt_no-1]->rp->Q_saved, q_saved will update automatically. */
+elmt_frame2d.c:     eap = &frp->eattr[i-1];
+elmt_frame2d.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_frame2d.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_frame3d.c:     eap = &frp->eattr[i-1];
+elmt_frame3d.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_frame3d.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_plate.c:     eap = &frp->eattr[i-1];
+elmt_plate.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_plate.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_psps.c:     eap = &frp->eattr[i-1];
+elmt_psps.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_psps.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_set_attr.c:	   frame->element[i-1].rp->Q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 3, 1);
+elmt_set_attr.c:	   frame->element[i-1].rp->q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 3, 1);
+elmt_set_attr.c:	   frame->element[i-1].rp->Q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 5, 1);
+elmt_set_attr.c:	   frame->element[i-1].rp->q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 5, 1);
+elmt_set_attr.c:	 frame->element[i-1].rp->sr_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_set_attr.c:	 frame->element[i-1].rp->er_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_set_attr.c:	 frame->element[i-1].rp->s0_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_set_attr.c:	 frame->element[i-1].rp->e0_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_set_attr.c:	 frame->element[i-1].rp->sx_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_set_attr.c:	 frame->element[i-1].rp->ex_saved = MatrixAllocIndirect( (char *)NULL,
+elmt_shell_4n.c:     eap = &frp->eattr[i-1];
+elmt_shell_4n.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_shell_4n.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_shell_4n_q.c:     eap = &frp->eattr[i-1];
+elmt_shell_4n_q.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_shell_4n_q.c:        if(frp->no_dof == 6) { /* 3d analysis */
+elmt_shell_8n.c:     eap = &frp->eattr[i-1];
+elmt_shell_8n.c:        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+elmt_shell_8n.c:        if(frp->no_dof == 6) { /* 3d analysis */
+fe_allocate.c:    frp->no_dimen = (int) sp->u.q->value;
+fe_allocate.c:    frp->no_dof = (int) sp->u.q->value;
+fe_allocate.c:    frp->no_nodes_per_elmt = (int) sp->u.q->value;
+fe_allocate.c:       frp->no_integ_pt = UNIT_INTEG_PTS;        /* 2 as default */
+fe_allocate.c:       frp->no_integ_pt = (int) sp->u.q->value;
+fe_allocate.c:    frp->node      = (NODE *)    MyCalloc( UNIT_NODES,    sizeof(NODE));
+fe_allocate.c:    frp->element   = (ELEMENT *) MyCalloc( UNIT_ELEMENTS, sizeof(ELEMENT));
+fe_allocate.c:    frp->eattr     = (ELEMENT_ATTR *) MyCalloc(UNIT_ELEMENT_ATTR, sizeof(ELEMENT_ATTR));
+fe_allocate.c:    frp->rigid     = (RIGID *) MyCalloc( UNIT_RIGIDS,   sizeof(RIGID));
+fe_allocate.c:    frp->jdiag     = (int *)   MyCalloc((UNIT_NODES * UNIT_NDF), sizeof(int));
+fe_allocate.c:    frp->nforces   = (NODE_LOADS *) MyCalloc( UNIT_NFORCES, sizeof(NODE_LOADS));
+fe_allocate.c:    frp->eforces   = (ELEMENT_LOADS *) MyCalloc( UNIT_ELEMENTS, sizeof(ELEMENT_LOADS));
+fe_allocate.c:        np = &frp->node[i-1];
+fe_allocate.c:        np->coord = (QUANTITY *) MyCalloc(frp->no_dimen, sizeof(QUANTITY));
+fe_allocate.c:           for(j = 1; j <= frp->no_dimen; j++){
+fe_allocate.c:        np->bound_id = (int *) MyCalloc(frp->no_dof, sizeof(int));
+fe_allocate.c:        np->disp     = (QUANTITY *) MyCalloc(frp->no_dof, sizeof(QUANTITY));
+fe_allocate.c:           for (j = 1; j <= frp->no_dof; j++) {
+fe_allocate.c:        ep                 = &frp->element[i-1];
+fe_allocate.c:        ep->node_connect   = (int  *) MyCalloc((frp->no_nodes_per_elmt+1),sizeof(int));
+fe_allocate.c:        ep->d_array        = (int  *) MyCalloc(frp->no_nodes_per_elmt, sizeof(int));
+fe_allocate.c:        ep->rp->Forces     = MatrixAllocIndirect("nodal_force",DOUBLE_ARRAY,frp->no_dof,UNIT_NODES);
+fe_allocate.c:        ep->rp->displ     = MatrixAllocIndirect("displ", DOUBLE_ARRAY, frp->no_dof, UNIT_NODES);
+fe_allocate.c:        ep->rp->stress    = MatrixAllocIndirect("stress", DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_allocate.c:        ep->rp->strain_pl = MatrixAllocIndirect("strain_pl",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_allocate.c:        ep->rp->strain_pl_incr     = MatrixAllocIndirect("strain_pl_incr",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_allocate.c:        ep->rp->effect_pl_strain   = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
+fe_allocate.c:        ep->rp->eff_pl_strain_incr = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
+fe_allocate.c:           ep->rp->min_moment.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_allocate.c:           ep->rp->max_moment.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_allocate.c:           ep->rp->min_shear.dimen   = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_allocate.c:           ep->rp->max_shear.dimen   = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_allocate.c:           ep->rp->Mzc.dimen         = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_allocate.c:        eap                   = &frp->eattr[i-1];
+fe_allocate.c:        rig                  = &frp->rigid[i-1];
+fe_allocate.c:        elsp                       = &frp->eforces[i-1];
+fe_allocate.c:        elsp->face_direc           = (double *) MyCalloc(frp->no_dimen, sizeof(double));
+fe_allocate.c:       elp->body_force           = (QUANTITY *) MyCalloc(frp->no_dimen, sizeof(QUANTITY));
+fe_allocate.c:       elp->init_stress          = (QUANTITY *) MyCalloc(frp->no_dimen, sizeof (QUANTITY));
+fe_allocate.c:       elp->init_strain          = (double *) MyCalloc(frp->no_dimen, sizeof (double));
+fe_allocate.c:       elp->traction             = (QUANTITY *) MyCalloc(frp->no_dimen, sizeof(QUANTITY));
+fe_allocate.c:          for(j = 1; j <= frp->no_dimen; j++) {
+fe_allocate.c:          for(j = 1; j <= frp->no_dimen; j++) {
+fe_allocate.c:          for(j = 1; j <= frp->no_dimen; j++) {
+fe_allocate.c:       nlp         = &frp->nforces[i-1];
+fe_allocate.c:       nlp->fn     = (QUANTITY *) MyCalloc(frp->no_dof, sizeof(QUANTITY));
+fe_allocate.c:          for(j = 1; j <= frp->no_dof; j++) {
+fe_checkmemory.c:       frp->no_nodes = node_no;
+fe_checkmemory.c:       frp->node  = (NODE *) realloc(frp->node,(max_no_nodes+node_no)*sizeof(NODE));
+fe_checkmemory.c:       frp->jdiag = (int *) realloc(frp->jdiag,(((max_no_nodes+node_no)*UNIT_NDF*sizeof(int))));
+fe_checkmemory.c:           np = &frp->node[i-1];
+fe_checkmemory.c:           np->coord    = (QUANTITY *) MyCalloc(frp->no_dimen, sizeof(QUANTITY));
+fe_checkmemory.c:           np->bound_id =      (int *) MyCalloc(frp->no_dof, sizeof(int));
+fe_checkmemory.c:           np->disp     = (QUANTITY *) MyCalloc(frp->no_dof, sizeof(QUANTITY));
+fe_checkmemory.c:              for(j = 1; j <= frp->no_dimen; j++) {
+fe_checkmemory.c:              for (j = 1; j <= frp->no_dof; j++) {
+fe_checkmemory.c:       printf("  frp->no_dimen = %4d \n", frp->no_dimen);
+fe_checkmemory.c:       frp->jdiag = (int *) realloc(frp->jdiag, (max_no_eqs+iEqNo)*sizeof(int));
+fe_checkmemory.c:           frp->jdiag[i-1] = (int) 0;
+fe_checkmemory.c:       frp->no_elements = element_no;
+fe_checkmemory.c:       frp->element = (ELEMENT *) realloc(frp->element,
+fe_checkmemory.c:           el = &frp->element[i-1];
+fe_checkmemory.c:           el->node_connect   = iVectorAlloc(frp->no_nodes_per_elmt + 1);
+fe_checkmemory.c:           el->node_connect   = (int *) MyCalloc((frp->no_nodes_per_elmt + 1), sizeof(int));
+fe_checkmemory.c:           el->d_array        = (int *) MyCalloc(frp->no_nodes_per_elmt, sizeof(int));
+fe_checkmemory.c:           el->rp->Forces     = MatrixAllocIndirect("nodal_force",
+fe_checkmemory.c:                                DOUBLE_ARRAY, frp->no_dof, UNIT_NODES);
+fe_checkmemory.c:           el->rp->stress     = MatrixAllocIndirect("nodalforce",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_checkmemory.c:           el->rp->displ      = MatrixAllocIndirect("displ",DOUBLE_ARRAY,frp->no_dof,UNIT_NODES);
+fe_checkmemory.c:           el->rp->strain_pl  = MatrixAllocIndirect("strain_pl",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_checkmemory.c:           el->rp->strain_pl_incr  = MatrixAllocIndirect("strain_pl_incr",DOUBLE_ARRAY,9,iNO_INTEG_pts);
+fe_checkmemory.c:           el->rp->effect_pl_strain      = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
+fe_checkmemory.c:           el->rp->eff_pl_strain_incr = (double *) MyCalloc(iNO_INTEG_pts, sizeof(double));
+fe_checkmemory.c:             el->rp->min_moment.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_checkmemory.c:             el->rp->max_moment.dimen  = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_checkmemory.c:             el->rp->min_shear.dimen   = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_checkmemory.c:             el->rp->max_shear.dimen   = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_checkmemory.c:             el->rp->Mzc.dimen         = (DIMENSIONS *) MyCalloc(1,sizeof(DIMENSIONS));
+fe_checkmemory.c:       frp->no_rigid  = rigid_no; /* Allocate space till the 'rigid_no' input */
+fe_checkmemory.c:       frp->rigid = (RIGID *) realloc(frp->rigid,(max_no_rigid + rigid_no)*sizeof(RIGID));
+fe_checkmemory.c:           rig           = &frp->rigid[i-1];
+fe_checkmemory.c:       frp->no_node_loads = nforce_no;
+fe_checkmemory.c:       frp->nforces = (NODE_LOADS *) realloc(frp->nforces, 
+fe_checkmemory.c:           frp->nforces[i-1].fn = (QUANTITY *) MyCalloc(frp->no_dof, sizeof(QUANTITY));
+fe_checkmemory.c:              for(j = 1; j <= frp->no_dof; j++) {
+fe_checkmemory.c:                  frp->nforces[i-1].fn[j-1].dimen  = (DIMENSIONS *) MyCalloc(1, sizeof(DIMENSIONS));
+fe_checkmemory.c:     frp->eforces = (ELEMENT_LOADS *) realloc(frp->eforces,
+fe_checkmemory.c:        elsp = &frp->eforces[i -1];
+fe_checkmemory.c:        elsp->face_direc           = (double *) MyCalloc(frp->no_dimen, sizeof(double));
+fe_matrix.c:       no_nodes_per_elmt = p->nodes_per_elmt;                  /* MIN(p->nodes_per_elmt, frp->no_nodes_per_elmt);*/
+fe_matrix.c:       no_dof            = p->dof_per_node;                    /* MIN(p->dof_per_node,frp->no_dof);*/
+fe_matrix.c:       rb_ty = frp->rigid[elmt_no -1].rb_type ;
+fe_matrix.c:       ii    = frp->rigid[elmt_no -1].in[1] ; /* node no of node conn by rbody for dofs */
+fe_matrix.c:           jj = frp->rigid[elmt_no -1].rest_dof[j];
+fe_matrix.c:              k  = frp->node[ii - 1].bound_id[j]; /* equation nos assigned to dofs */
+fe_matrix.c:    for(i = 1; i<=frp->no_rigid;i++) {
+fe_matrix.c:        no_node = frp->rigid[i-1].nodes_conn;
+fe_matrix.c:            nn = frp->rigid[i-1].in[j];
+fe_matrix.c:                   frp->node[nn -1].rb_num = i;
+fe_matrix.c:           if(frp->ndm == 3) {
+fe_matrix.c:               if(frp->basic_elmt_type == TRUSS_3D)
+fe_matrix.c:                 rb_ty = frp->rigid[rb_no -1].rb_type; 
+fe_matrix.c:           cgx = p->coord[1][i].value - frp->rigid[rb_no -1].xcg.value;
+fe_matrix.c:           cgy = p->coord[2][i].value - frp->rigid[rb_no -1].ycg.value;
+fe_matrix.c:           if(frp->ndm >= 3)
+fe_matrix.c:              cgz = p->coord[3][i] - frp->rigid[rb_no -1].zcg;
+fe_matrix.c:     rb_ty = frp->rigid[rb_no -1].rb_type;
+fe_matrix.c:     pcx =     p->work_section[4].value - frp->rigid[rb_no -1].xcg.value;
+fe_matrix.c:     pcy =     p->work_section[5].value - frp->rigid[rb_no -1].ycg.value;
+fe_matrix.c:     if( frp->ndm >= 3)
+fe_matrix.c:        pcz =    p->work_section[6] - frp->rigid[rb_no -1].zcg;
+fe_matrix.c:    rb_elmt_type  = frp->rigid[rb_no -1].rb_type;
+fe_matrix.c:        ndof = frp->rigid[rb_no -1].rest_dof[j];
+fe_matrix.c:   k   = frp->no_dof;       /*for general case*/
+fe_matrix.c:   rb_no = frp->node[nn -1].rb_num;
+fe_matrix.c:   rb_elmt_type = frp->rigid[rb_no -1].rb_type;
+fe_matrix.c:    cgx = frp->node[nn-1].coord[1].value - frp->rigid[rb_no -1].xcg.value;
+fe_matrix.c:    cgy = frp->node[nn-1].coord[2].value - frp->rigid[rb_no -1].ycg.value;
+fe_matrix.c:    if(frp->ndm >=3)
+fe_matrix.c:       cgz  =   frp->node[nn-1].coord[3] - frp->rigid[rb_no -1].zcg;
+fe_matrix.c:    Tfj = (double **)Transformation_Matrix(Tfj,(char *)rb_elmt_type,frp->no_dof, cgx,cgy,cgz);
+fe_matrix.c:    Tfj = (double **)Modify_T_Matrix(Tfj, frp,frp->no_dof ,rb_no);
+fe_matrix.c:    frp->node[nn -1].TrT->uMatrix.daa = (double **) dMatrixTranspose(Tfj,frp->no_dof,frp->no_dof);
+fe_matrix.c:        Fj[i][1] = F[(nn  - 1) * frp->no_dof +i].value;
+fe_matrix.c:    Ff = (double **) dMatrixMult(Tfj, frp->no_dof, frp->no_dof,Fj, frp->no_dof, 1);
+fe_matrix.c:        F[(nn  - 1) * frp->no_dof+i].value = Ff[i][1];
+fe_matrix.c:    MatrixFreeIndirectDouble(Ff, frp->no_dof);
+fe_matrix.c:    MatrixFreeIndirectDouble(Fj, frp->no_dof);
+fe_matrix.c:    MatrixFreeIndirectDouble(Tfj, frp->no_dof);
+fe_matrix.c:    el  = &frp->element[elmt_no -1];      /* element ptr   */
+fe_matrix.c:    no_dof = p->dof_per_node;   /*ed feb 6  MIN(p->dof_per_node,frp->no_dof)*/
+fe_matrix.c:               displ = frp->node[el->node_connect[i]  - 1].disp[j].value; 
+fe_matrix.c:    el = &frp->element[elmt_no -1];
+fe_matrix.c:    el           = &frp->element[elmt_no -1];
+fe_matrix.c:    el_type      = frp->eattr[elmt_attr_no-1].elmt_type;
+fe_matrix.c:    ldofg        = frp->eattr[elmt_no-1].map_ldof_to_gdof;
+fe_matrix.c:        iid = (ii-1) * frp->no_dof;
+fe_matrix.c:    for(dof=1; dof<=frp->no_eq; dof++)
+fe_matrix.c:    for(nload = 1; nload <= frp->no_node_loads; nload++) {
+fe_matrix.c:        nlp  = &frp->nforces[nload-1];
+fe_matrix.c:        for(i =1; i <= frp->no_dof; i++)
+fe_matrix.c:            fv[(node -1) *  frp->no_dof + i ].value = nlp->fn[i].value;
+fe_matrix.c:   for(node=1;node<=frp->no_nodes;node++) {
+fe_matrix.c:       np   = &frp->node[node-1];
+fe_matrix.c:       for(i =1; i<= frp->no_dof; i++) {
+fe_matrix.c:               K[dof][(node-1)*frp->no_dof +i] = 0.;
+fe_matrix.c:               K[(node-1)*frp->no_dof + 1][dof] = 0.;
+fe_matrix.c:           K[(node-1)*frp->no_dof + 1][(node-1)*frp->no_dof+ 1] = 0.;
+fe_matrix.c:           F[(node-1)*frp->no_dof + 1]   = 0.;
+fe_matrix.c:   for(dof=1; dof<=frp->no_eq; dof++)
+fe_matrix.c:   for(nload = 1; nload <= frp->no_node_loads; nload++) {
+fe_matrix.c:     nlp  = &frp->nforces[nload-1];
+fe_matrix.c:         for(i =1; i <= frp->no_dof; i++)
+fe_matrix.c:             fv[(node -1) *  frp->no_dof + i ].value = nlp->fn[i].value;
+fe_matrix.c:        frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1] =
+fe_matrix.c:            UnitsCopy( &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]) ,
+fe_matrix.c:            ZeroUnits( &(frame->element[elmt_no-1].rp->Forces->spColUnits[j-1]) );
+fe_matrix.c:                       &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]) );
+fe_matrix.c:        frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1];
+fe_nonlinear.c:       ep->rp->Forces->uMatrix.daa[i-1][j-1]
+fe_nonlinear.c:       ep->rp->displ->uMatrix.daa[i-1][j-1] 
+fe_nonlinear.c:  ep->rp->max_moment.value = RespondBuff[elmt_no-1].max_moment.value;
+fe_nonlinear.c:          ep->rp->effect_pl_strain[j-1] = 0.0;
+fe_nonlinear.c:              ep->rp->stress->uMatrix.daa[i-1][j-1] 
+fe_nonlinear.c:          ep->rp->effect_pl_strain[j-1]
+fe_nonlinear.c:              ep->rp->stress->uMatrix.daa[i-1][j-1] 
+fe_nonlinear.c:              ep->rp->strain_pl->uMatrix.daa[i-1][j-1] 
+fe_nonlinear.c:           UnitsCopy( &(ep->rp->stress->spRowUnits[i-1]), d );
+fe_nonlinear.c:          el->rp->sr_saved->uMatrix.daa[sec][ifib] = hp->sr->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:          el->rp->er_saved->uMatrix.daa[sec][ifib] = hp->er->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:          el->rp->s0_saved->uMatrix.daa[sec][ifib] = hp->s0->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:          el->rp->e0_saved->uMatrix.daa[sec][ifib] = hp->e0->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:          el->rp->sx_saved->uMatrix.daa[sec][ifib] = hp->stress->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:          el->rp->ex_saved->uMatrix.daa[sec][ifib] = hp->strain->uMatrix.daa[sec][ifib];
+fe_nonlinear.c:    no_section = frp->no_integ_pt + 2;  /* include 2 end sections */
+fe_nonlinear.c:    for( ii=1 ; ii <= frp->no_elements; ++ii )
+fe_nonlinear.c:       elmt_attr_no = frp->element[ii-1].elmt_attr_no;
+fe_nonlinear.c:       if( !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_2D"))
+fe_nonlinear.c:        || !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_3D"))
+fe_nonlinear.c:        || !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_2DS"))
+fe_nonlinear.c:        || !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_3DS")) )
+fe_nonlinear.c:	  no_fiber = frp->eattr[elmt_attr_no-1].work_fiber->no_fiber;
+fe_nonlinear.c:	  no_shear = frp->eattr[elmt_attr_no-1].work_fiber->no_shear;
+fe_nonlinear.c:	  total_no_fiber = no_fiber + (frp->no_dimen-1)*no_shear;
+fe_nonlinear.c:             Es = frp->eattr[elmt_attr_no-1].work_fiber->fiber[ifib].Es;
+fe_nonlinear.c:          if( !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_2D")) 
+fe_nonlinear.c:           || !(strcmp(frp->eattr[elmt_attr_no-1].elmt_type, "FIBER_3D")) ) {
+fe_nonlinear.c:                Es = frp->eattr[elmt_attr_no-1].work_fiber->fiber[ifib].Es;
+fe_nonlinear.c:                Es = frp->eattr[elmt_attr_no-1].work_fiber->fiber[ifib-no_fiber].Gs;
+fe_nonlinear.c:                Es = frp->eattr[elmt_attr_no-1].work_fiber->fiber[ifib-no_fiber-no_shear].Gs;
+fe_print.c:            frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1]
+fe_print.c:                 UnitsCopy( &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]),
+fe_print.c:                 ZeroUnits( &(frame->element[elmt_no-1].rp->Forces->spColUnits[j-1]) );
+fe_print.c:                          ep->rp->stress->spRowUnits[0].units_name,
+fe_print.c:                          ep->rp->stress->spRowUnits[1].units_name,
+fe_print.c:                          ep->rp->stress->spRowUnits[2].units_name,
+fe_print.c:                          ep->rp->stress->spRowUnits[3].units_name,
+fe_print.c:                          ep->rp->stress->spRowUnits[4].units_name);
+fe_print.c:                             ep->rp->stress->uMatrix.daa[0][k-1]/ep->rp->stress->spRowUnits[0].scale_factor,
+fe_print.c:                             ep->rp->stress->uMatrix.daa[1][k-1]/ep->rp->stress->spRowUnits[1].scale_factor,
+fe_print.c:                             ep->rp->stress->uMatrix.daa[2][k-1]/ep->rp->stress->spRowUnits[2].scale_factor,
+fe_print.c:                             ep->rp->stress->uMatrix.daa[3][k-1]/ep->rp->stress->spRowUnits[3].scale_factor,
+fe_print.c:                             ep->rp->stress->uMatrix.daa[4][k-1]/ep->rp->stress->spRowUnits[4].scale_factor);
+fe_print.c:                             ep->rp->stress->uMatrix.daa[0][k-1],
+fe_print.c:                             ep->rp->stress->uMatrix.daa[1][k-1],
+fe_print.c:                             ep->rp->stress->uMatrix.daa[2][k-1],
+fe_print.c:                             ep->rp->stress->uMatrix.daa[3][k-1],
+fe_print.c:                             ep->rp->stress->uMatrix.daa[4][k-1]);
+fe_profile.c:       for(i = 1; i<= frp->no_dof;i++)
+fe_profile.c:    for(i = 1; i <= frp->no_nodes; i++) {
+fe_profile.c:        for(j = 1; j <= frp->no_dof; j++)
+fe_profile.c:            if(frp->node[i-1].bound_id[j] < nmax)
+fe_profile.c:               nmax = frp->node[i-1].bound_id[j];
+fe_profile.c:       for(i = 1; i <= frp->no_dof; i++)
+fe_profile.c:       for(i = 1; i <= frp->no_nodes; i++) {
+fe_profile.c:           for(j = 1; j <= frp->no_dof; j++)
+fe_profile.c:	       if(frp->node[i-1].bound_id[j] < nmax)
+fe_profile.c:	          nmax = frp->node[i-1].bound_id[j];
+fe_profile.c:        for(n =1; n <=frp->no_nodes; n++){
+fe_profile.c:        for(i =1; i <=frp->no_dof; i++){
+fe_profile.c:            j = frp->node[n-1].bound_id[i-1];
+fe_profile.c:               jj = (n-1) * frp->no_dof+ i;
+fe_profile.c:   el              = &frp->element[elmt_no-1];  /* element ptr               */
+fe_profile.c:   eap             = &frp->eattr[elmt_attr_no -1]; 
+fe_profile.c:         p->nodes_per_elmt = (int) MIN(frp->no_nodes_per_elmt,
+fe_profile.c:         p->material_name = SaveString( frp->eattr[elmt_attr_no-1].material );
+fe_profile.c:            p->integ_ptr->integ_pts = frp->no_integ_pt;
+fe_profile.c:	    p->Q_saved  = el->rp->Q_saved;
+fe_profile.c:	    p->q_saved  = el->rp->q_saved;
+fe_profile.c:	    p->sr_saved = el->rp->sr_saved;
+fe_profile.c:	    p->er_saved = el->rp->er_saved;
+fe_profile.c:	    p->s0_saved = el->rp->s0_saved;
+fe_profile.c:	    p->e0_saved = el->rp->e0_saved;
+fe_profile.c:	    p->sx_saved = el->rp->sx_saved;
+fe_profile.c:	    p->ex_saved = el->rp->ex_saved;
+fe_profile.c:               = frp->eattr[elmt_attr_no-1].work_section[i-1].value;
+fe_profile.c:                  frp->eattr[elmt_attr_no-1].work_section[i-1].dimen );
+fe_profile.c:               = frp->eattr[elmt_attr_no-1].work_material[i-1].value;
+fe_profile.c:                 frp->eattr[elmt_attr_no-1].work_material[i-1].dimen );
+fe_profile.c:               p->integ_ptr->integ_pts = frp->no_integ_pt;
+fe_profile.c:	       p->Q_saved  = el->rp->Q_saved;
+fe_profile.c:	       p->q_saved  = el->rp->q_saved;
+fe_profile.c:	       p->sr_saved = el->rp->sr_saved;
+fe_profile.c:	       p->er_saved = el->rp->er_saved;
+fe_profile.c:	       p->s0_saved = el->rp->s0_saved;
+fe_profile.c:	       p->e0_saved = el->rp->e0_saved;
+fe_profile.c:	       p->sx_saved = el->rp->sx_saved;
+fe_profile.c:	       p->ex_saved = el->rp->ex_saved;
+fe_profile.c:                p->effect_pl_strain[j-1]   = el->rp->effect_pl_strain[j-1];
+fe_profile.c:                    = el->rp->stress->uMatrix.daa[i-1][j-1];
+fe_profile.c:                    = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
+fe_profile.c:            for(j = 1; j <= frp->no_nodes_per_elmt; j++) {
+fe_profile.c:                       = frp->node[node_no -1].coord[i-1].value;
+fe_profile.c:                          frp->node[node_no -1].coord[i-1].dimen );
+fe_profile.c:                    p->displ->uMatrix.daa[i-1][j-1]      = el->rp->displ->uMatrix.daa[i-1][j-1];
+fe_profile.c:               p->nodal_temp[j-1].value = frp->eforces->elib_ptr[j-1].temp_change.value; 
+fe_profile.c:                  frp->eforces->elib_ptr[j-1].temp_change.dimen );
+fe_profile.c:                    if(frp->eforces->elib_ptr[j-1].body_force != NULL) {
+fe_profile.c:                       = frp->eforces->elib_ptr[j-1].body_force[i-1].value; 
+fe_profile.c:                          frp->eforces->elib_ptr[j-1].body_force[i-1].dimen );
+fe_profile.c:                 if(frp->eforces->elib_ptr[j-1].init_strain != NULL)
+fe_profile.c:                    = frp->eforces->elib_ptr[j-1].init_strain[i-1];
+fe_profile.c:                 if(frp->eforces->elib_ptr[j-1].init_stress != NULL) {
+fe_profile.c:                    = frp->eforces->elib_ptr[j-1].init_stress[i-1].value; 
+fe_profile.c:                       frp->eforces->elib_ptr[j-1].init_stress[i-1].dimen );
+fe_profile.c:                      = frp->node[node_no -1].coord[i-1].value;    
+fe_profile.c:                         frp->node[node_no -1].coord[i-1].dimen );
+fe_profile.c:                p->effect_pl_strain[j-1]   = el->rp->effect_pl_strain[j-1];
+fe_profile.c:                    = el->rp->stress->uMatrix.daa[i-1][j-1];
+fe_profile.c:                    = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
+fe_profile.c:                p->displ->uMatrix.daa[i-1][j-1]      = el->rp->displ->uMatrix.daa[i-1][j-1];
+fe_profile.c:                p->effect_pl_strain[j-1]   = el->rp->effect_pl_strain[j-1];
+fe_profile.c:                    = el->rp->stress->uMatrix.daa[i-1][j-1];
+fe_profile.c:                    = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
+fe_profile.c:                p->displ->uMatrix.daa[i-1][j-1] = el->rp->displ->uMatrix.daa[i-1][j-1];
+fe_profile.c:                      = frp->node[node_no -1].coord[i-1].value;
+fe_profile.c:                         frp->node[node_no -1].coord[i-1].dimen );
+fe_profile.c:               for(j=1;j <= frp->no_element_loads; j++) {
+fe_profile.c:                   if(elmt_no == frp->eforces[i].elmt_no ){ 
+fe_profile.c:                      p->elmt_load_ptr =  &frp->eforces[i-1] ;
+fe_profile.c:                p->displ->uMatrix.daa[i-1][j-1]      = el->rp->displ->uMatrix.daa[i-1][j-1];
+fe_profile.c:                       = frp->node[node_no -1].coord[i-1].value;
+fe_profile.c:                          frp->node[node_no -1].coord[i-1].dimen );
+fe_profile.c:            for(j = 1; j <= frp->no_element_loads; j++) {
+fe_profile.c:                if(elmt_no == frp->eforces[i-1].elmt_no) { 
+fe_profile.c:                   p->elmt_load_ptr = &frp->eforces[i-1];
+fe_profile.c:            p->effect_pl_strain[j-1]   = el->rp->effect_pl_strain[j-1];
+fe_profile.c:                p->stress->uMatrix.daa[i-1][j-1]         = el->rp->stress->uMatrix.daa[i-1][j-1];
+fe_profile.c:                p->strain_pl->uMatrix.daa[i-1][j-1]      = el->rp->strain_pl->uMatrix.daa[i-1][j-1];
+fe_profile.c:    p->elmt_state = frp->element[elmt_no -1].esp->state;
+fe_profile.c:    p->eep        = frp->element[elmt_no -1].ep;
+fe_profile.c:    p->ealpha     = frp->element[elmt_no -1].alpha;
+fe_profile.c:    elmt_attr_no = frp->element[elmt_no-1].elmt_attr_no;
+fe_profile.c:    eap = &frp->eattr[elmt_attr_no-1];
+fe_profile.c:        if(!strcmp(elmt_library[i-1].name, frp->eattr[elmt_attr_no-1].elmt_type)) {
+fe_profile.c:          p->nodal_loads[k-1].value   = frp->element[elmt_no -1].rp->Forces->uMatrix.daa[i-1][j-1]; 
+fe_profile.c:              &(frp->element[elmt_no -1].rp->Forces->spRowUnits[i-1]) );

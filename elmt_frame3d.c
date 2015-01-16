@@ -1,7 +1,8 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *       elmt_frame3d.c : Three Dimensional Frame Element
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  elmt_frame3d.c : Three Dimensional Frame Element
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
@@ -31,7 +32,7 @@
  *             +ve AF    -  Tension(LHS outwards)                     
  *  ------------------------------------------------------------------- 
  *                                                                     
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -47,6 +48,10 @@
 /*
 #define DEBUG
 */
+
+/* function declarations */
+
+ARRAY *sld05( ARRAY * , int );
 
 
 /* ============================================================== */
@@ -180,8 +185,6 @@ int          UNITS_SWITCH;
           break;
        case CHERROR:
             break;
-       case STRESS_LOAD:
-            break;
        case STRESS_UPDATE:
             break;
        case PRESSLD:
@@ -200,9 +203,10 @@ int          UNITS_SWITCH;
             rot = (double **) MatrixAllocIndirectDouble(p->size_of_stiff, p->size_of_stiff);
             rot = (double **) tmat(rot, 6, p); 
 
-            if( UNITS_SWITCH==ON )   p->stiff->spColUnits[0].units_type = UNITS_TYPE;
+            if( UNITS_SWITCH==ON )   p->stiff->spColUnits[0].units_type = CheckUnitsType();
 
-            p->stiff = beamst3d(p, p->stiff, EA, EIzz, E.value*Iyy, G.value*J ,xl, rot, p->size_of_stiff, p->dof_per_node); 
+            p->stiff = beamst3d(p, p->stiff, EA, EIzz, E.value*Iyy, G.value*J ,xl, rot,
+                                p->size_of_stiff, p->dof_per_node); 
 
             MatrixFreeIndirectDouble(rot, p->size_of_stiff);
             break;
@@ -241,7 +245,7 @@ int          UNITS_SWITCH;
             if( rT==0 && A!=0 )    rT = sqrt( J / A );
 
             if( UNITS_SWITCH == ON ) 
-                p->stiff->spColUnits[0].units_type = UNITS_TYPE;
+                p->stiff->spColUnits[0].units_type = CheckUnitsType();
 
             p->stiff = beamms3d(p, p->stiff,p->type, mbar, xl, rT, rot, p->size_of_stiff, p->dof_per_node);
 
@@ -269,7 +273,7 @@ int          UNITS_SWITCH;
             cs = rot[0][0];
             rot[0][0] = 1.0;
 
-            if (UNITS_SWITCH==ON)  p->stiff->spColUnits[0].units_type = UNITS_TYPE;
+            if (UNITS_SWITCH==ON)  p->stiff->spColUnits[0].units_type = CheckUnitsType();
             p->stiff = beamst3d(p, p->stiff, EA, EIzz, E.value*Iyy,
                        G.value*J, xl, rot, p->size_of_stiff, p->dof_per_node); 
 
@@ -299,7 +303,7 @@ int          UNITS_SWITCH;
                H_Print = NO;
             }
 
-            if(isw == STRESS && PRINT_STRESS == ON ) {
+            if(isw == STRESS ) {
                printf("\n");
                printf("Elmt# %3d : ", p->elmt_no);
                if(UNITS_SWITCH == ON)
@@ -336,13 +340,13 @@ int          UNITS_SWITCH;
             /* Assign element forces's units */
 
             if( UNITS_SWITCH == ON ) {
-                if(UNITS_TYPE == SI) {
-                  dp_length = DefaultUnits("m");
-                  dp_force  = DefaultUnits("N");
+                if( CheckUnitsType() == SI) {
+                    dp_length = DefaultUnits("m");
+                    dp_force  = DefaultUnits("N");
                 }
-                if(UNITS_TYPE == US) {
-                  dp_length = DefaultUnits("in");
-                  dp_force  = DefaultUnits("lbf");
+                if( CheckUnitsType() == US) {
+                    dp_length = DefaultUnits("in");
+                    dp_force  = DefaultUnits("lbf");
                 }
                 dp_moment = UnitsMult( dp_force, dp_length );
 
@@ -354,7 +358,7 @@ int          UNITS_SWITCH;
 		}
             }
 
-            if(isw == STRESS && PRINT_STRESS == ON ) {
+            if(isw == STRESS ) {
 	       switch(UNITS_SWITCH) {
 		 case ON:
                   /* node_i */
@@ -547,13 +551,13 @@ DIMENSIONS     *d1, *d2;
     /* ==================== */
 
     if( CheckUnits() == ON ) {
-       if(UNITS_TYPE == SI) {
-          d1 = DefaultUnits("Pa");
-          d2 = DefaultUnits("m");
+       if( CheckUnitsType() == SI) {
+           d1 = DefaultUnits("Pa");
+           d2 = DefaultUnits("m");
        }
        else {
-          d1 = DefaultUnits("psi");
-          d2 = DefaultUnits("in");
+           d1 = DefaultUnits("psi");
+           d2 = DefaultUnits("in");
        }
 
        UnitsMultRep( &(s->spColUnits[0]), d1, d2 );
@@ -720,13 +724,13 @@ DIMENSIONS *d1,*d2,*d3;
     /* ---------------------- */
 
     if( CheckUnits() == ON ) {
-       if(UNITS_TYPE == SI) {
-          d1 = DefaultUnits("Pa");
-          d2 = DefaultUnits("m");
+       if( CheckUnitsType() == SI) {
+           d1 = DefaultUnits("Pa");
+           d2 = DefaultUnits("m");
        }
        else {
-          d1 = DefaultUnits("psi");
-          d2 = DefaultUnits("in");
+           d1 = DefaultUnits("psi");
+           d2 = DefaultUnits("in");
        }
        d3 = DefaultUnits("sec");
 
@@ -993,6 +997,152 @@ double **rt, **asj, **sj, **sij, **kj;
 }
 
 
+/* 
+ *  =============================================================
+ *  print_property_frame_3d() : Print FRAME_3D Element Properties
+ *  =============================================================
+ */ 
+
+#ifdef __STDC__
+void print_property_frame_3d(EFRAME *frp, int i)
+#else
+void print_property_frame_3d(frp, i)
+EFRAME    *frp;
+int          i;                 /* elmt_attr_no */
+#endif
+{
+int     UNITS_SWITCH;
+ELEMENT_ATTR    *eap;
+
+     UNITS_SWITCH = CheckUnits();
+     eap = &frp->eattr[i-1];
+
+     if( PRINT_MAP_DOF == ON ) {
+        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+           printf("             ");
+           printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+        }
+
+        if(frp->no_dof == 6) { /* 3d analysis */
+           printf("             ");
+           printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+           printf("             ");
+           printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
+                           eap->map_ldof_to_gdof[3],
+                           eap->map_ldof_to_gdof[4],
+                           eap->map_ldof_to_gdof[5]);
+        } 
+     }
+
+     switch(UNITS_SWITCH) {
+       case ON:
+        UnitsSimplify( eap->work_material[0].dimen );
+        UnitsSimplify( eap->work_material[2].dimen );
+        UnitsSimplify( eap->work_material[5].dimen );
+        UnitsSimplify( eap->work_section[1].dimen );
+        UnitsSimplify( eap->work_section[2].dimen );
+        UnitsSimplify( eap->work_section[12].dimen );
+        UnitsSimplify( eap->work_section[10].dimen );
+        if( eap->work_material[0].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e %s\n",
+                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
+                           eap->work_material[0].dimen->units_name);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[2].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e %s\n",
+                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
+                           eap->work_material[2].dimen->units_name);
+        }
+	if( eap->work_material[5].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Density         = %16.3e %s\n",
+                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
+                           eap->work_material[5].dimen->units_name);
+	}
+	if( eap->work_section[1].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Inertia Iyy     = %16.3e %s\n",
+                           eap->work_section[1].value/eap->work_section[1].dimen->scale_factor,
+                           eap->work_section[1].dimen->units_name);
+	}
+	if( eap->work_section[2].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Inertia Izz     = %16.3e %s\n",
+                           eap->work_section[2].value/eap->work_section[2].dimen->scale_factor,
+                           eap->work_section[2].dimen->units_name);
+	}
+	if( eap->work_section[12].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Torsional Constant J = %16.3e %s\n",
+                           eap->work_section[12].value/eap->work_section[12].dimen->scale_factor,
+                           eap->work_section[12].dimen->units_name);
+	}
+	if( eap->work_section[10].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Area            = %16.3e %s\n",
+                           eap->work_section[10].value/eap->work_section[10].dimen->scale_factor,
+                           eap->work_section[10].dimen->units_name);
+	}
+       break;
+       case OFF:
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e\n",
+                            eap->work_material[0].value);
+        }
+        if( eap->work_material[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e\n",
+                            eap->work_material[2].value);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Density         = %16.3e\n",
+                            eap->work_material[5].value);
+        }
+        if( eap->work_section[1].value != 0.0 ) {
+           printf("             ");
+           printf("         : Inertia Iyy     = %16.3e\n",
+                            eap->work_section[1].value);
+        }
+        if( eap->work_section[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Inertia Izz     = %16.3e\n",
+                            eap->work_section[2].value);
+        }
+        if( eap->work_section[12].value != 0.0 ) {
+           printf("             ");
+           printf("         : Torsional Constant J = %16.3e\n",
+                            eap->work_section[12].value);
+        }
+        if( eap->work_section[10].value != 0.0 ) {
+           printf("             ");
+           printf("         : Area            = %16.3e\n",
+                            eap->work_section[10].value);
+        }
+        break;
+        default:
+        break;
+     }
+}
+
+
 /* ================================================== */
 /* Equivalent Loading Procedure for 3 D frame element */
 /* ================================================== */
@@ -1178,10 +1328,6 @@ SHP_START:
                  }
               }
               break;
-         case STRESS_LOAD:
-              for(i = 0; i <= 11; i++) 
-              load[i] = p->nodal_loads[i].value;
-              break;
          default:
               break;
     }
@@ -1201,14 +1347,6 @@ SHP_START:
               p->nodal_loads[inc-1].value = p->nodal_loads[inc-1].value + rt[inc-1][j-1]* (double) load[j-1];
     }
 
-    /* mid pt moment */
-/*
-    if(task == STRESS){
-       p->nodal_loads[13].value = MCYT; 
-       p->nodal_loads[14].value = MCZT; 
-    }
-*/
- 
     MatrixFreeIndirectDouble(rmat, p->size_of_stiff);
     MatrixFreeIndirectDouble(rt, p->size_of_stiff);
 

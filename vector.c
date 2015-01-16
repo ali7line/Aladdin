@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *             vector.c : Functions for Vector Operations and Printing
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  vector.c : Functions for Vector Operations and Printing
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,16 +20,16 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: M.A. Austin                                             July 1992
+ *  Written by: M.A. Austin                                              May 1997
  *  ============================================================================= 
  */
 
 #include <stdio.h>
+#include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "vector.h"
-#include "miscellaneous.h"
-#include "defs.h"
 
 /* #define DEBUG */
 

@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *         elmt_plate.c : Quadrilateral DKT Plate Bending Element
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  elmt_plate.c : Quadrilateral DKT Plate Bending Element
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -36,8 +37,8 @@
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
-#include "symbol.h"
 #include "fe_functions.h"
+#include "elmt.h"
 
 /*
 #define DEBUG 
@@ -93,12 +94,13 @@ double        **shp;
 double         **bm;
 int i,j,l,lint,i1,k;
 int    length1, length2, unit_length;
-int                     UNITS_SWITCH;
+int          UNITS_SWITCH, UnitsType;
 int           ii, jj, kk, k1, k2, k3;
 DIMENSIONS  *dimen, *dimen1, *dimen2;
 
    H_Print = 0;
    UNITS_SWITCH = CheckUnits();
+   UnitsType    = CheckUnitsType();
 
 #ifdef DEBUG
        printf("In elmt_plate() : starting with isw = %10d\n", isw);
@@ -251,7 +253,7 @@ DIMENSIONS  *dimen, *dimen1, *dimen2;
             /* Initiation of Stiffness Units Buffer           */
 
             if( CheckUnits() == ON ) {
-               if(UNITS_TYPE == SI) {
+               if( UnitsType == SI) {
                   dimen1 = DefaultUnits("Pa");
                   dimen2 = DefaultUnits("m");
                }
@@ -324,7 +326,7 @@ DIMENSIONS  *dimen, *dimen1, *dimen2;
                printf("---------------------------------------------------------------------------\n");
                if(UNITS_SWITCH == ON) {   
                   printf("Units");
-	          switch(UNITS_TYPE) {
+	          switch( UnitsType ) {
 	            case US:
                        dimen = DefaultUnits("lbf");
                        break;
@@ -372,35 +374,6 @@ DIMENSIONS  *dimen, *dimen1, *dimen2;
 /* Jacqud(x,ndm) */
 /* ============= */
 
-#ifdef OLD_VERSION
-/***********************/
-int jacqud(x,ndm,aa,bb,cc,dd,ee)
-double **x;
-double aa[5],bb[5],cc[5],dd[5],ee[5];
-int ndm;
-{
-int i,k;
-double b,c,sql;
-
-   for(i=1 ; i<=4; i++) {
-       k = i%4 + 1;
-
-       b = x[3][k]-x[3][i]; 
-       c = x[1][i]-x[1][k];
-       sql = b*b+c*c;
-
-       aa[i] = 1.5*c/sql;
-       bb[i] = 0.75*b*c/sql;
-       cc[i] = (0.25*c*c-0.5*b*b)/sql;
-       dd[i] = -1.5*b/sql;
-       ee[i] = (0.25*b*b-0.5*c*c)/sql;
-   }
-
-   return;
-}
-#endif
-/***********************/
-
 int jacqud(x,aa,bb,cc,dd,ee)
 QUANTITY **x;
 double aa[5],bb[5],cc[5],dd[5],ee[5];
@@ -424,7 +397,6 @@ double b,c,sql;
 
    return;
 }
-
 
 
 /* ============================= */
@@ -538,6 +510,116 @@ double xs,xt,ys,yt,ss,tt,sn,tn,si[5],ti[5];
 #endif
 
    return(shp);
+}
+
+/*
+ *  ===============================================
+ *  Print DKT_PLATE Element Properties
+ *  ===============================================
+ */
+
+#ifdef __STDC__
+void print_property_plate(EFRAME *frp, int i)
+#else
+void print_property_plate(frp, i)
+EFRAME    *frp;
+int          i;                 /* elmt_attr_no */
+#endif
+{
+int     UNITS_SWITCH;
+ELEMENT_ATTR    *eap;
+
+     UNITS_SWITCH = CheckUnits();
+     eap = &frp->eattr[i-1];
+
+     if( PRINT_MAP_DOF == ON ) {
+        if(frp->no_dof == 3 || frp->no_dof == 2) { 
+           printf("             ");
+           printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+        }
+
+        if(frp->no_dof == 6) { /* 3d analysis */
+           printf("             ");
+           printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
+                           eap->map_ldof_to_gdof[0],
+                           eap->map_ldof_to_gdof[1],
+                           eap->map_ldof_to_gdof[2]);
+           printf("             ");
+           printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
+                           eap->map_ldof_to_gdof[3],
+                           eap->map_ldof_to_gdof[4],
+                           eap->map_ldof_to_gdof[5]);
+        } 
+     }
+
+     switch(UNITS_SWITCH) {
+       case ON:
+        UnitsSimplify( eap->work_material[0].dimen );
+        UnitsSimplify( eap->work_material[2].dimen );
+        UnitsSimplify( eap->work_material[5].dimen );
+        UnitsSimplify( eap->work_section[2].dimen );
+        UnitsSimplify( eap->work_section[10].dimen );
+        if( eap->work_material[0].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e %s\n",
+                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
+                           eap->work_material[0].dimen->units_name);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[2].dimen->units_name != NULL ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e %s\n",
+                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
+                           eap->work_material[2].dimen->units_name);
+        }
+	if( eap->work_material[5].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Density         = %16.3e %s\n",
+                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
+                           eap->work_material[5].dimen->units_name);
+	}
+	if( eap->work_section[11].dimen->units_name != NULL ) {
+          printf("             ");
+          printf("         : Plate Thickness = %16.3e %s\n",
+                           eap->work_section[11].value/eap->work_section[11].dimen->scale_factor,
+                           eap->work_section[11].dimen->units_name);
+	}
+       break;
+       case OFF:
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Young's Modulus =  E = %16.3e\n",
+                            eap->work_material[0].value);
+        }
+        if( eap->work_material[2].value != 0.0 ) {
+           printf("             ");
+           printf("         : Yielding Stress = fy = %16.3e\n",
+                            eap->work_material[2].value);
+        }
+        if( eap->work_material[4].value != 0.0 ) {
+           printf("             ");
+           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
+        }
+        if( eap->work_material[0].value != 0.0 ) {
+           printf("             ");
+           printf("         : Density         = %16.3e\n",
+                            eap->work_material[5].value);
+        }
+        if( eap->work_section[11].value != 0.0 ) {
+           printf("             ");
+           printf("         : Plate Thickness = %16.3e\n",
+                            eap->work_section[11].value);
+        }
+        break;
+        default:
+        break;
+     }
 }
 
 ARRAY *sld08(p, isw)

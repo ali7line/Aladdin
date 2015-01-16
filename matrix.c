@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *             matrix.c : High-Level Functions for Matrix Operations and Printing
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  matrix.c : High-Level Functions for Matrix Operations and Printing
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -31,8 +32,8 @@
 #include <varargs.h>
 #endif
 
-#include "miscellaneous.h"
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "vector.h"
@@ -43,50 +44,50 @@
 
 
 /*
- *  ================================================================
- *  MatrixPrint(matrix, ...)                            
+ *  ===============================================================================
+ *  MatrixPrintCast(matrix, ...) : Print a matrix casting appropriate row or column
+ *                                 units to those listed in [ units_m ].
  *                                                                 
- *  Usage :  In input file                                      
- *           MatrixPrint(m)                                     
- *        or MatrixPrint(m1, m2, units_m)                      
- *        or MatrixPrint(m1, m2,...,m4, units_m)               
+ *  Usage :  In Aladdin Input File                                      
+ *           MatrixPrintCast(m)                                     
+ *        or MatrixPrintCast(m1, m2, units_m)                      
+ *        or MatrixPrintCast(m1, m2,...,m4, units_m)               
+ *                                                                 
+ *        Column units are scaled with [ units_m ] = [ a , b , c ]
+ *        Row units are scaled with    [ units_m ] = [ a ; b ; c ]
+ *                                                                 
  *  Usage :  In c-code                                       
  *           MatrixPrint(m, (MATRIX *) NULL)                  
  *        or MatrixPrint(m1, m2, units_m, (MATRIX *) NULL)    
- *  ================================================================
+ *  ===============================================================================
  */
 
+/* #define MATRIX_DEBUG */
+
 #ifdef  __STDC__
-MATRIX *MatrixPrint( MATRIX *first_matrix, ... ) {
+MATRIX *MatrixPrintCast( MATRIX *first_matrix, ... ) {
 #else
-MATRIX *MatrixPrint(va_alist)
+MATRIX *MatrixPrintCast(va_alist)
 va_dcl
 {
 MATRIX *first_matrix;
 #endif
 
 va_list arg_ptr;
-MATRIX *p;
-MATRIX *q;
-int i, j, k, ii,jj; 
+MATRIX      *p, *q;
+DIMENSIONS *d1,*d2;
 int col_counter, *COL_COUNT; 
 int row_counter, *ROW_COUNT; 
-int Max_Col_Counter, *MAX_COL_COUNT; 
-int Max_Row_Counter, *MAX_ROW_COUNT; 
-int NO_COL_WITH_UNITS; 
-int NO_ROW_WITH_UNITS; 
-int NO_COL_WITH_NO_UNITS; 
-int NO_ROW_WITH_NO_UNITS; 
-int UNITS_NO_q; 
-int UNITS_NO_p; 
-int UNITS_SWITCH;
-int                YESNO_ROW;
-int                YESNO_COL;
-int                  COL_ROW; 
+int NO_COL_WITH_UNITS, NO_ROW_WITH_UNITS; 
+int NO_COL_WITH_NO_UNITS, NO_ROW_WITH_NO_UNITS; 
+int UNITS_NO_q, UNITS_NO_p, UNITS_SWITCH;
 int length, length1, length2; 
-int           iFLAG  = FALSE;
-int           iFLAG1 = FALSE; 
-DIMENSIONS           *d1,*d2;
+int i, j, k, ii, jj, COL_ROW; 
+int iFLAG  = FALSE;
+
+#ifdef MATRIX_DEBUG
+       printf("Enter MatrixPrintCast() function\n");
+#endif
 
     /* [a] : Get units_matrix */
 
@@ -97,54 +98,33 @@ DIMENSIONS           *d1,*d2;
     first_matrix = va_arg(arg_ptr, MATRIX *);
 #endif
 
-    /* [b] : Find out units_matrix */
-
     UNITS_SWITCH = CheckUnits();
     i = 0;
     q = (MATRIX *) 1;  /* a NON NULL pointer */
+
+    /* [b] : Compute number of matrices in argument list */
 
     for(p = first_matrix; q != NULL; q = va_arg(arg_ptr, MATRIX *)) {
         if( i != 0) p = q;
         i = i + 1;
     }
+    va_end(arg_ptr);
+
+    /* [c] : One matrix in argument list (call standard matrixprint function) */
 
     if( i == 1) {
-      switch( p->eRep ) {
-        case INDIRECT :
-           switch((int) p->eType) {
-              case DOUBLE_ARRAY:
-                if( UNITS_SWITCH == ON )
-                   MatrixUnitsSimplify(p);
-                MatrixPrintIndirectDouble(p);
-                break;
-              case INTEGER_ARRAY:
-                if( UNITS_SWITCH == ON )
-                   MatrixUnitsSimplify(p);
-                MatrixPrintIndirectInteger(p);
-                break;
-              default:
-                   FatalError("In MatrixPrint() : Undefined m->eType",(char *)NULL);
-                break;
-           }  /* end of case INDIRECT */
-           break;
-        case SKYLINE :
-           switch((int) p->eType) {
-              case DOUBLE_ARRAY:
-                if( UNITS_SWITCH == ON )
-                   MatrixUnitsSimplify(p);
-                MatrixPrintSkylineDouble(p);
-                break;
-              default:
-                   FatalError("In MatrixPrint() : Undefined m->eType",(char *)NULL);
-                break;
-           }  /* end of case SKYLINE */
-           break;
-        default :
-           FatalError("In MatrixPrint() : Undefined m->eRep",(char *)NULL);
-           break;
-      }  /* end of switch of p->eRep */ 
-    }  /* end of if( i==1 ) */
-    va_end(arg_ptr);
+        MatrixPrintVar( (MATRIX *) first_matrix, (MATRIX *) NULL );
+        return;
+    }
+
+    /* [d] : Check that units are on for rest of function */
+
+    if( UNITS_SWITCH == OFF) {
+        FatalError("In MatrixPrintCast() : Units must be on to use this function",
+                  (char *)NULL);
+    }
+
+    /* [e] : Walk along Matrix Argument List and print contents */
 
 #ifdef __STDC__
     va_start(arg_ptr, first_matrix);
@@ -153,179 +133,192 @@ DIMENSIONS           *d1,*d2;
     first_matrix = va_arg(arg_ptr, MATRIX *);
 #endif
 
-      if(i > 1 && UNITS_SWITCH == ON ) { 
-         for(q = first_matrix; q != p;  q = va_arg(arg_ptr, MATRIX *)) {
-             ROW_COUNT = (int *) MyCalloc(q->iNoRows, sizeof(int));
-             COL_COUNT = (int *) MyCalloc(q->iNoColumns, sizeof(int));
-             Max_Row_Counter = 0;
-             Max_Col_Counter = 0;
+    for(q = first_matrix; q != p;  q = va_arg(arg_ptr, MATRIX *)) {
 
-      /*********************************************************************/
-      /*   Count the number of columns with units in matrix q              */ 
-      /*********************************************************************/
-          col_counter = 0;
-          for(k = 1; k <= q->iNoColumns; k++) {
-              /* Column units */
-              d2 = &(q->spColUnits[k-1]);
-              if(d2->length_expnt != 0 || d2->time_expnt   != 0 ||
-                 d2->mass_expnt   != 0 || d2->temp_expnt   != 0) {
-                 col_counter = col_counter + 1;
-                 COL_COUNT[col_counter-1] = k;  /* record column with units */
-                 YESNO_COL = YES;
-              }
-              else 
-                 YESNO_COL = NO;
-          }
-          row_counter = 0;
-          for(j = 1; j<= q->iNoRows; j++) {
-              /* Row units */
-              d2 = &(q->spRowUnits[j-1]);
-              if(d2->length_expnt != 0 || d2->time_expnt   != 0 ||
-                 d2->mass_expnt   != 0 || d2->temp_expnt   != 0) {
-                 row_counter = row_counter + 1;
-                 ROW_COUNT[row_counter-1] = j;  /* record row  with units */
-                 YESNO_ROW = YES;
-              }
-              else
-                 YESNO_ROW = NO;
-          }
-          if(row_counter > Max_Row_Counter) {
-             Max_Row_Counter = row_counter;
-             MAX_ROW_COUNT   = ROW_COUNT;
-          }
+        /* [e.1] : Allocate memory for row and columns ... */ 
 
-          if(col_counter > Max_Col_Counter) {
-             Max_Col_Counter = col_counter;
-             MAX_COL_COUNT   = COL_COUNT;
-          }
+        ROW_COUNT = (int *) MyCalloc(q->iNoRows,    sizeof(int));
+        COL_COUNT = (int *) MyCalloc(q->iNoColumns, sizeof(int));
 
-          NO_ROW_WITH_UNITS = Max_Row_Counter;
-          NO_ROW_WITH_NO_UNITS = q->iNoRows - NO_ROW_WITH_UNITS;
+        /* [e.2] : Count number of columns in matrix q with units          */ 
+        /*                                                                 */
+        /*         Array COL_COUNT[i] stores the no of the i-th column in  */
+        /*         matrix q having units.                                  */
+        /*                                                                 */
 
-          NO_COL_WITH_UNITS = Max_Col_Counter;
-          NO_COL_WITH_NO_UNITS = q->iNoColumns - NO_COL_WITH_UNITS;
+        col_counter = 0;
+        for(k = 1; k <= q->iNoColumns; k++) {
+            /* Column units */
+            d2 = &(q->spColUnits[k-1]);
+            if(d2->length_expnt != 0 || d2->time_expnt   != 0 || d2->mass_expnt != 0 ||
+               d2->temp_expnt   != 0 || d2->radian_expnt != 0 ) {
+               col_counter = col_counter + 1;
+               COL_COUNT[col_counter-1] = k;  /* record column with units */
+            } 
+        }
 
-      /*********************************************************************/
-         if(NO_COL_WITH_NO_UNITS == q->iNoColumns &&
-            NO_ROW_WITH_NO_UNITS == q->iNoRows) {     /*  matrix q have no units  */
-             printf(" Inconsistent Units \n");
-             FatalError("in MatrixPrint(): trying to print out a non-dimensional matrix with units",(char *)NULL);
-         }
-         else {
-            if(p->iNoRows == 1) {
-               UNITS_NO_p = p->iNoColumns;
-               UNITS_NO_q = NO_COL_WITH_UNITS;
-               COL_ROW    = COLUMN;
+        /* [e.3] : Count number of rows in matrix q having units        */ 
+        /*                                                              */
+        /*         Array ROW_COUNT[i] stores the no of the i-th row in  */
+        /*         matrix q having units.                               */
+        /*                                                              */
+
+        row_counter = 0;
+        for(j = 1; j<= q->iNoRows; j++) {
+            d2 = &(q->spRowUnits[j-1]);
+            if(d2->length_expnt != 0 || d2->time_expnt   != 0 || d2->mass_expnt != 0 ||
+               d2->temp_expnt   != 0 || d2->radian_expnt != 0 ) {
+               row_counter = row_counter + 1;
+               ROW_COUNT[row_counter-1] = j;  /* record row  with units */
             }
-            if(p->iNoColumns == 1) {
-               UNITS_NO_p = p->iNoRows;
-               UNITS_NO_q = NO_ROW_WITH_UNITS;
-               COL_ROW    = ROW;
+        }
+
+        /* Save cols and rows with (and without) units.            */
+
+        NO_ROW_WITH_UNITS = row_counter;
+        NO_ROW_WITH_NO_UNITS = q->iNoRows - NO_ROW_WITH_UNITS;
+        NO_COL_WITH_UNITS = col_counter;
+        NO_COL_WITH_NO_UNITS = q->iNoColumns - NO_COL_WITH_UNITS;
+
+        /* If matrix "q" is dimensionless, print error message and */
+        /* terminate program execution                             */
+
+        if(NO_COL_WITH_NO_UNITS == q->iNoColumns &&
+           NO_ROW_WITH_NO_UNITS == q->iNoRows) { 
+           FatalError("In MatrixPrintCase()"
+                      "Trying to print out a non-dimensional matrix with units",
+                       (char *) NULL);
+        } 
+
+        /* Units matrix must be larger than (1x1) matrix */
+
+        if(p->iNoRows == 1 && p->iNoColumns == 1) {
+           FatalError("In MatrixPrintCase()"
+                      "Units matrix must have more than one column or row",
+                       (char *) NULL);
+        }
+
+        /* p->iNoRows == 1 implies scaling of column units */
+
+        if(p->iNoRows == 1) {
+           UNITS_NO_p = p->iNoColumns;
+           UNITS_NO_q = NO_COL_WITH_UNITS;
+           COL_ROW    = COLUMN;
+        }
+
+        /* p->iNoColumns == 1 implies scaling of column units */
+
+        if(p->iNoColumns == 1) {
+           UNITS_NO_p = p->iNoRows;
+           UNITS_NO_q = NO_ROW_WITH_UNITS;
+           COL_ROW    = ROW;
+        }
+
+        /* If matrix "p" contains more rows/columns of units than matrix "q" */
+        /* print error message and terminate program execution               */
+
+        if(UNITS_NO_q < UNITS_NO_p) {
+           FatalError("In MatrixPrintCase()"
+                      "The units matrix contains too many rows/columns",
+                      (char *) NULL); 
+        }
+
+        /* [e.5] : No of columns with units in matrix q are larger   */
+        /*         than or equal to no of columns in units matrix p  */
+
+        /* Case 1 : Scale Column Units */
+
+        if( COL_ROW == COLUMN ) {
+           for(ii = 1; ii <= UNITS_NO_q; ii++) {
+               j  = COL_COUNT[ii-1];
+               d1 = &(q->spColUnits[j-1]);
+               for(k = 1; k <= p->iNoColumns; k++) {
+                   d2 = &(p->spColUnits[k-1]);
+
+                   if((d1->length_expnt  == d2->length_expnt) &&
+                      (d1->mass_expnt    == d2->mass_expnt)   &&
+                      (d1->time_expnt    == d2->time_expnt)   &&
+                      (d1->temp_expnt    == d2->temp_expnt)   &&
+                      (d1->radian_expnt  == d2->radian_expnt))  {
+                      UnitsCopy( &(q->spColUnits[j-1]), &(p->spColUnits[k-1]) );
+                      iFLAG = TRUE;
+                   }
+               }
             }
-            if(UNITS_NO_q < UNITS_NO_p) {
-               printf(" Number of units does not match:\n"); 
-               printf("   : Too many units in units matrix \n"); 
-               printf("   : No of columns with units in matrix of []%dx%d is %d \n",
-                            q->iNoRows, q->iNoColumns, NO_COL_WITH_UNITS); 
-               printf("   : No of columns of units matrix is %d \n", p->iNoColumns); 
-               FatalError(" Fatal Error in MatrixPrint(): ",(char *)NULL); 
-            }
-            else { /* No of columns with units in matrix q are larger   */
-                   /* than or equal to no of columns in units matrix p  */
-               switch(COL_ROW)  {
-                   case COLUMN :
-                    for(ii = 1; ii <= UNITS_NO_q; ii++) {
-                        j = MAX_COL_COUNT[ii-1];
-                        d1 = &(q->spColUnits[j-1]);
-                        for(k = 1; k <= p->iNoColumns; k++){
-                            d2 = &(p->spColUnits[k-1]);
-			    if(SameUnits(d1,d2) == TRUE) {
-                               UnitsCopy( &(q->spColUnits[j-1]), &(p->spColUnits[k-1]) );
-                               iFLAG1 = TRUE;
-                            } else 
-                               iFLAG1 = MAX(iFLAG1, FALSE);
-                            if(iFLAG1 == TRUE) break;
-                        }
-                        if(iFLAG1 == TRUE) iFLAG = TRUE;
-                        iFLAG1 = FALSE;
-                    }
-                    if(iFLAG == FALSE)
-                       FatalError(" Fatal Error in MatrixPrint(): inconsistent units ",(char *)NULL);
-                   break;
-                   case ROW:
-                    for(j = 1; j <= UNITS_NO_q; j++) {
-                        k = MAX_ROW_COUNT[j-1];
-                        d1 = &(q->spRowUnits[k-1]);
-                        for(jj = 1; jj <= p->iNoRows; jj++){
-                            d2 = &(p->spRowUnits[jj-1]);
-			    if(SameUnits(d1,d2) == TRUE) {
-                               UnitsCopy( &(q->spRowUnits[k-1]), &(p->spRowUnits[jj-1]) );
-                               iFLAG1 = TRUE;
-                            } else
-                               iFLAG1 = MAX(iFLAG1, FALSE);
-                            if(iFLAG1 == TRUE) break;
-                        }
-                        if(iFLAG1 == TRUE) iFLAG = TRUE;
-                        iFLAG1 = FALSE;
-                    }
-                    if(iFLAG == FALSE)
-                       FatalError(" MatrixPrint(): inconsistent units ",(char *)NULL);
-                   break;
-                   default :
-                   break;
-                 }
-            }
-          }
-          switch( q->eRep ) {
-            case INDIRECT :
-              switch((int) q->eType) {
-                 case DOUBLE_ARRAY:
-                   MatrixUnitsSimplify(q);
-                   MatrixPrintIndirectDouble(q);
-                   break;
-                 case INTEGER_ARRAY:
-                   MatrixUnitsSimplify(q);
-                   MatrixPrintIndirectInteger(q);
-                   break;
-                 default:
-                   FatalError("In MatrixPrint() : Undefined m->eType",(char *)NULL);
-                   break;
-              }  /* end of case INDIRECT */
-              break;
-            case SKYLINE :
-              switch((int) q->eType) {
-                 case DOUBLE_ARRAY:
-                   MatrixUnitsSimplify(q);
-                   MatrixPrintSkylineDouble(q);
-                   break;
-                 default:
-                   FatalError("In MatrixPrint() : Undefined m->eType",(char *)NULL);
-                   break;
-             }  /* end of case SKYLINE */
-             break;
-           default:
-             FatalError("In MatrixPrint() : Undefined m->eRep",(char *)NULL);
-             break;
-        }  /* end of switch( q->eRep ) */
-        free( (char *) ROW_COUNT );
-        free( (char *) COL_COUNT );
-      }  /* end of for loop */
-      va_end(arg_ptr);
-    }  /* end of if( i>1 && UNITS_SWITCH == ON ) */
-    if(i > 1 &&  UNITS_SWITCH == OFF) {
-      printf("*** You need to set units on to use this function \n");
-      FatalError("*** Units are off",(char *)NULL);
-    }
+            if(iFLAG == FALSE)
+               FatalError("In MatrixPrintCast(): Inconsistent Units",
+                         (char *) NULL);
+        }
+
+        /* Case 2 : Scale Row Units */
+
+        if( COL_ROW == ROW ) {
+            for(j = 1; j <= UNITS_NO_q; j++) {
+               k  = ROW_COUNT[j-1];
+               d1 = &(q->spRowUnits[k-1]);
+               for(jj = 1; jj <= p->iNoRows; jj++) {
+                   d2 = &(p->spRowUnits[jj-1]);
+                   if((d1->length_expnt  == d2->length_expnt) &&
+                      (d1->mass_expnt    == d2->mass_expnt)   &&
+                      (d1->time_expnt    == d2->time_expnt)   &&
+                      (d1->temp_expnt    == d2->temp_expnt)   &&
+                      (d1->radian_expnt  == d2->radian_expnt))  {
+                         UnitsCopy( &(q->spRowUnits[k-1]), &(p->spRowUnits[jj-1]) );
+                         iFLAG = TRUE;
+                   }
+               }
+           }
+           if(iFLAG == FALSE)
+              FatalError("In MatrixPrintCast(): Inconsistent Units",
+                        (char *) NULL );
+        }
+
+        /* Now print matrix (without simplification of units) */
+
+        switch((int)p->eRep) {
+          case  SEQUENTIAL:
+          case  INDIRECT:
+                switch((int) p->eType) {
+                    case DOUBLE_ARRAY:
+                         MatrixPrintIndirectDouble(q);
+                         break;
+                    case INTEGER_ARRAY:
+                         MatrixPrintIndirectInteger(q);
+                         break;
+                    default:
+                         FatalError("In MatrixPrintVar() : Undefined m->eType",
+                                   (char *) NULL);
+                         break;
+                }
+                break;
+          case  SKYLINE:
+                MatrixPrintSkylineDouble(q);
+                break;
+          default:
+                FatalError("In MatrixPrintVar() : Undefined m->eRep",
+                          (char *) NULL);
+                break;
+       } 
+
+       free( (char *) ROW_COUNT );
+       free( (char *) COL_COUNT );
+   }
+
+   va_end(arg_ptr);
+
+#ifdef MATRIX_DEBUG
+       printf("Leave MatrixPrintCast() function\n");
+#endif
 
 }
 
+
 /*
- *  ===================================================================
+ *  =====================================================================
  *  MatrixPrintVar() : Print a variable number of matrices
- * 
- *  Input  :
- *  Output :
- *  ===================================================================
+ *
+ *  In Aladdin input file this function is called with PrintMatrix( .. );
+ *  =====================================================================
  */
 
 #ifdef  __STDC__
@@ -419,6 +412,7 @@ int     UNITS_SWITCH;
     va_end(arg_ptr);
 }
 
+
 
 /*
  *  ==============================================================
@@ -452,10 +446,10 @@ int              i;
 
    /* [c] : Zero out units in row/column units vectors */
 
-   for( i=1 ; i<= iNoRows ; i++ ) {
+   if( CheckUnits() == ON ) {
+      for( i=1 ; i<= iNoRows ; i++ )
         ZeroUnits(&(m1->spRowUnits[i-1]));
-   }
-   for( i=1 ; i<= iNoColumns ; i++ ) {
+      for( i=1 ; i<= iNoColumns ; i++ )
         ZeroUnits(&(m1->spColUnits[i-1]));
    }
 
@@ -2490,11 +2484,9 @@ int    length;
  *  MatrixExtract():  Extract part of matrix and assign  
  *                    to another matrix                  
  *  Usage:                                               
- *      Copy sub-matrix of m2, bounded by top_left corner  
- *      A, and bottom_right corner B, to m1                 
+ *      Copy sub-matrix of m2, bounded by top_left corner A
  *      m1 = MatrixExtract(m1, m2, A)                       
  *      and A->uMatrix.daa = (i,j);               
- *          B = (m2->iNoRows+i, m2->iNoColumns+j)  
  *  ======================================================
  */ 
 
@@ -2508,12 +2500,11 @@ va_dcl
 MATRIX *m1;
 #endif
 
-va_list              arg_ptr;
-MATRIX               *m2, *A;
-MATRIX                    *m;
-int      i, j, k, n, counter;
-int ii, jj, iNoRows, iNoCols;
-int             units_length;
+va_list         arg_ptr;
+MATRIX          *m2, *A;
+MATRIX               *m;
+int          i, j, k, n;
+int  ii, jj, iMin, iMax;
 
 #ifdef DEBUG
      printf("\n Enter MatrixExtract()\n");
@@ -2530,17 +2521,7 @@ int             units_length;
     A  = va_arg(arg_ptr, MATRIX *);
     va_end(arg_ptr);
 
-#ifdef DEBUG
-     printf("\n Matrix_Column_Copy() number of arguments = %d\n", counter);
-     printf("\n m1->iNoRows = %d\n",    m1->iNoRows);
-     printf("\n m1->iNoColumns = %d\n", m1->iNoColumns);
-     printf("\n m2->iNoRows = %d\n",    m2->iNoRows);
-     printf("\n m2->iNoColumns = %d\n", m2->iNoColumns);
-     printf("\n A->iNoRows    = %d\n",  A->iNoRows);
-     printf("\n A->iNoColumns = %d\n",  A->iNoColumns);
-#endif 
-
-    m = MatrixCopyIndirectDouble(m1);
+    m = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, m1->iNoRows, m1->iNoColumns );
 
     /* [a] : matrix bounds check */
 
@@ -2555,38 +2536,44 @@ int             units_length;
                 "Matrix rows/columns are outbounds in MatrixExtract()",(char *)NULL);
     }
 
-    /* [b] : Extract matrix when "Units are ON" */
-
-    if( CheckUnits() == ON ) {
-
-        i = (int) A->uMatrix.daa[0][0]; 
-        for(ii = 1; ii <= m->iNoRows; ii++) {
-            j = (int) A->uMatrix.daa[0][1]; 
-            for(jj = 1; jj <= m->iNoColumns; jj++) {
+    switch( (int)m2->eRep ) {
+       case INDIRECT :
+          i = (int) A->uMatrix.daa[0][0]; 
+          for(ii = 1; ii <= m->iNoRows; ii++) {
+             j = (int) A->uMatrix.daa[0][1]; 
+             for(jj = 1; jj <= m->iNoColumns; jj++) {
                 m->uMatrix.daa[ii-1][jj-1] = m2->uMatrix.daa[i-1][j-1];
-                UnitsCopy(&(m->spColUnits[jj-1]), &(m2->spColUnits[j-1]));
                 j++;
-            }
-            UnitsCopy(&(m->spRowUnits[ii-1]), &(m2->spRowUnits[i-1]));
-            i++;
-        }
+             }
+             i++;
+          }
+       break;
+
+       case SKYLINE :
+          i = (int) A->uMatrix.daa[0][0]; 
+          for(ii = 1; ii <= m->iNoRows; ii++) {
+             j = (int) A->uMatrix.daa[0][1]; 
+             for(jj = 1; jj <= m->iNoColumns; jj++) {
+                iMin = MIN( i, j );
+                iMax = MAX( i, j );
+                if( (iMax-iMin+1) <= m2->uMatrix.daa[iMax-1][0] )
+                   m->uMatrix.daa[ii-1][jj-1] = m2->uMatrix.daa[iMax-1][iMax-iMin+1];
+                else
+                   m->uMatrix.daa[ii-1][jj-1] = 0.0;
+                j++;
+             }
+             i++;
+          }
+       break;
+       default :
+       break;
     }
 
-    /* [c] : Extract matrix when "Units are OFF" */
-
-    if( CheckUnits() == OFF ) {
-
-        i = (int) A->uMatrix.daa[0][0]; 
-        for(ii = 1; ii <= m->iNoRows; ii++) {
-            printf(" ii, i = %d, %d \n", ii, i);
-            j = (int) A->uMatrix.daa[0][1]; 
-            for(jj = 1; jj <= m->iNoColumns; jj++) {
-                printf(" jj, j = %d, %d \n", jj, j);
-                m->uMatrix.daa[ii-1][jj-1] = m2->uMatrix.daa[i-1][j-1];
-                j++;
-            }
-            i++;
-        }
+    if( CheckUnits() == ON ) {
+       for(ii=1, i=(int)A->uMatrix.daa[0][0]; ii <= m->iNoRows; ii++, i++)
+          UnitsCopy(&(m->spRowUnits[ii-1]), &(m2->spRowUnits[i-1]));
+       for(jj=1, j=(int)A->uMatrix.daa[0][1]; jj <= m->iNoColumns; jj++, j++)
+          UnitsCopy(&(m->spColUnits[jj-1]), &(m2->spColUnits[j-1]));
     }
 
     return (m);
@@ -2603,10 +2590,9 @@ int             units_length;
  *                submatrix                             
  *  Usage:                                              
  *     Copy matrix m2 into matrix m1 at location bounded 
- *     by top_left corner A, and bottom_right corner B  
+ *     by top_left corner A;
  *     m1 = MatrixPut(m1, m2, A)                        
  *          and A->uMatrix.daa = (i,j);                  
- *              B    = (m2->iNoRows+i, m2->iNoColumns+j) 
  *  ======================================================
  */
 
@@ -2620,12 +2606,12 @@ va_dcl
 MATRIX *m1;
 #endif
 
-va_list              arg_ptr;
-MATRIX               *m2, *A;
-MATRIX                    *m;
-int      i, j, k, n, counter;
-int ii, jj, iNoRows, iNoCols;
-int             units_length;
+va_list         arg_ptr;
+MATRIX          *m2, *A;
+MATRIX               *m;
+int          i, j, k, n;
+int  ii, jj, iMin, iMax;
+int        UNITS_SWITCH;
 
 #ifdef DEBUG
      printf("\n Enter MatrixPut()\n");
@@ -2641,18 +2627,38 @@ int             units_length;
     m2 = va_arg(arg_ptr, MATRIX *);
     A  = va_arg(arg_ptr, MATRIX *);
     va_end(arg_ptr);
+    UNITS_SWITCH = CheckUnits();
     
-#ifdef DEBUG
-     printf("\n Matrix_Column_Copy() number of arguments = %d\n", counter);
-     printf("\n m1->iNoRows = %d\n",    m1->iNoRows);
-     printf("\n m1->iNoColumns = %d\n", m1->iNoColumns);
-     printf("\n m2->iNoRows = %d\n",    m2->iNoRows);
-     printf("\n m2->iNoColumns = %d\n", m2->iNoColumns);
-     printf("\n A->iNoRows    = %d\n",  A->iNoRows);
-     printf("\n A->iNoColumns = %d\n",  A->iNoColumns);
-#endif 
+    m = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, m1->iNoRows, m1->iNoColumns );
 
-    m = MatrixCopyIndirectDouble(m1);
+    switch( (int)m1->eRep ) {
+       case INDIRECT:
+          for(ii = 1; ii <= m->iNoRows; ii++)
+             for(jj = 1; jj <= m->iNoColumns; jj++)
+                m->uMatrix.daa[ii-1][jj-1] = m1->uMatrix.daa[ii-1][jj-1];
+       break;
+       case SKYLINE:
+          for(ii = 1; ii <= m->iNoRows; ii++) {
+             for(jj = 1; jj <= m->iNoColumns; jj++) {
+                iMin = MIN( ii, jj );
+                iMax = MAX( ii, jj );
+                if( (iMax-iMin+1) <= m1->uMatrix.daa[iMax-1][0] )
+                   m->uMatrix.daa[ii-1][jj-1] = m1->uMatrix.daa[iMax-1][iMax-iMin+1];
+                else
+                   m->uMatrix.daa[ii-1][jj-1] = 0.0;
+             }
+          }
+       break;
+       default:
+       break;
+    }
+    if( UNITS_SWITCH == ON ) {
+       MatrixUnitsSimplify( m1 );
+       for(ii = 1; ii <= m->iNoRows; ii++)
+          UnitsCopy(&(m->spRowUnits[ii-1]), &(m1->spRowUnits[ii-1]));
+       for(jj = 1; jj <= m->iNoColumns; jj++)
+          UnitsCopy(&(m->spColUnits[jj-1]), &(m1->spColUnits[jj-1]));
+    }
 
     /* [a] matrix bounds check */
 
@@ -2666,36 +2672,44 @@ int             units_length;
                    "Matrix rows/columns are outbounds in MatrixPut()",(char *)NULL);
     }
 
-    /* [b] : Put matrix when "Units are ON" */
-
-    if( CheckUnits() == ON ) {
-
-        i = (int) A->uMatrix.daa[0][0]; 
-        for(ii = 1; ii <= m2->iNoRows; ii++) {
-            j = (int) A->uMatrix.daa[0][1]; 
-            for(jj = 1; jj <= m2->iNoColumns; jj++) {
+    switch( (int)m2->eRep ) {
+       case INDIRECT :
+          i = (int) A->uMatrix.daa[0][0]; 
+          for(ii = 1; ii <= m2->iNoRows; ii++) {
+             j = (int) A->uMatrix.daa[0][1]; 
+             for(jj = 1; jj <= m2->iNoColumns; jj++) {
                 m->uMatrix.daa[i-1][j-1] = m2->uMatrix.daa[ii-1][jj-1];
-                UnitsCopy(&(m->spColUnits[j-1]), &(m2->spColUnits[jj-1]));
                 j++;
-            }
-            UnitsCopy(&(m->spRowUnits[i-1]), &(m2->spRowUnits[ii-1]));
-            i++;
-        }
+             }
+             i++;
+          }
+       break;
+
+       case SKYLINE :
+          i = (int) A->uMatrix.daa[0][0]; 
+          for(ii = 1; ii <= m2->iNoRows; ii++) {
+             j = (int) A->uMatrix.daa[0][1]; 
+             for(jj = 1; jj <= m2->iNoColumns; jj++) {
+                iMin = MIN( ii, jj );
+                iMax = MAX( ii, jj );
+                if( (iMax-iMin+1) <= m2->uMatrix.daa[iMax-1][0] )
+                   m->uMatrix.daa[i-1][j-1] = m2->uMatrix.daa[iMax-1][iMax-iMin+1];
+                else
+                   m->uMatrix.daa[i-1][j-1] = 0.0;
+                j++;
+             }
+             i++;
+          }
+       break;
+       default :
+       break;
     }
 
-    /* [c] : Put matrix when "Units are OFF" */
-
-    if( CheckUnits() == OFF ) {
-
-        i = (int) A->uMatrix.daa[0][0]; 
-        for(ii = 1; ii <= m2->iNoRows; ii++) {
-            j = (int) A->uMatrix.daa[0][1]; 
-            for(jj = 1; jj <= m2->iNoColumns; jj++) {
-                m->uMatrix.daa[i-1][j-1] = m2->uMatrix.daa[ii-1][jj-1];
-                j++;
-            }
-            i++;
-        }
+    if( UNITS_SWITCH == ON ) {
+       for(ii=1, i=(int)A->uMatrix.daa[0][0]; ii <= m2->iNoRows; ii++, i++)
+          UnitsCopy(&(m->spRowUnits[i-1]), &(m2->spRowUnits[ii-1]));
+       for(jj=1, j=(int)A->uMatrix.daa[0][1]; jj <= m2->iNoColumns; jj++, j++)
+          UnitsCopy(&(m->spColUnits[j-1]), &(m2->spColUnits[jj-1]));
     }
 
     return (m);
@@ -2704,14 +2718,15 @@ int             units_length;
 
 /*
  *  ===================================================================
- *  void MatrixSolveEigen() :
- *               : Solve [A][x] = [Lambda][B][x] by Subspace Iteration.
- *               : [A] and [B] are large (nxn) matrices
- *               : Size of [X_{k}] = [X_{k+1}]   = (nxm) matrix
- *               : Size of [Y_{k}] = [Y_{k+1}]   = (nxm) matrix
- *               : Size of [A_{k+1}] = [B_{k+1}] = (mxm) matrix
- *               : Size of [Eigenvalue_{k+1}] = (mxm) diagonal matrix
- *               : Size of [Q_{k+1}]          = (mxm) matrix
+ *  void MatrixSolveEigen() : Use method of Subspace iteration to
+ *                            solve [A][x] = [Lambda][B][x].
+ *
+ *  Algorithm : [A] and [B] are large (nxn) matrices
+ *            : Size of [X_{k}] = [X_{k+1}]   = (nxm) matrix
+ *            : Size of [Y_{k}] = [Y_{k+1}]   = (nxm) matrix
+ *            : Size of [A_{k+1}] = [B_{k+1}] = (mxm) matrix
+ *            : Size of [Eigenvalue_{k+1}] = (mxm) diagonal matrix
+ *            : Size of [Q_{k+1}]          = (mxm) matrix
  * 
  *  Input :  spA, spB
  *  Output : spEigenvector
@@ -2719,7 +2734,6 @@ int             units_length;
  *  Written By : M. Austin                             November 1993. 
  *  ===================================================================
  */
-/*  Default: SetUnitsOff()  */
 
 enum { MAX_SUBSPACE_ITERATIONS = 50 };
 
@@ -2753,7 +2767,7 @@ double          dMaxValue;
 int          UNITS_SWITCH;
 
 #ifdef DEBUG
-    printf("*** In MatrixSolveEigen()\n");
+       printf("*** In MatrixSolveEigen()\n");
 #endif 
 
     /* [c] : Loops for Subspace Iteration */
@@ -2767,7 +2781,7 @@ int          UNITS_SWITCH;
            iLoop = iLoop + 1;
 
 #ifdef DEBUG
-           printf("*** In MatrixSolveEigen() : Start Iteration %3d \n", iLoop);
+       printf("*** In MatrixSolveEigen() : Start Iteration %3d \n", iLoop);
 #endif
 
            /* [c.1] : Compute [Y_{k}] = [B]*[X_{k}] */
@@ -2872,6 +2886,7 @@ int          UNITS_SWITCH;
 #ifdef DEBUG
     printf("*** Leaving MatrixSolveEigen()\n");
 #endif 
+
 }
 
 #ifdef __STDC__
@@ -2889,6 +2904,7 @@ MATRIX     *spEigenvector;
 int                length;
 DIMENSIONS  *d,*d1,*dimen;
 int          UNITS_SWITCH;
+int             UnitsType;
 
     /* [a] : Check Input and Allocate Working Matrices */
 
@@ -2917,11 +2933,13 @@ int          UNITS_SWITCH;
         spEigenvector->uMatrix.daa[ii-1][ii-1] = 1.0;
 
     if( CheckUnits()==ON ) {
-        SetUnitsOff();
         UNITS_SWITCH = ON;
+        UnitsType = CheckUnitsType();
+        SetUnitsOff();
     }
 
     MatrixSolveEigen( spA, spB, spEigenvalue, spEigenvector, iNoEigen );
+
     for( ij=1 ; ij<=iNoEigen ; ij++ ) {
          spEigen->uMatrix.daa[0][ij-1] = spEigenvalue->uMatrix.daa[ij-1][0];
          for( ii=1 ; ii<=iSize ; ii++ )
@@ -2932,45 +2950,56 @@ int          UNITS_SWITCH;
         d     = (DIMENSIONS *)MyCalloc(1,sizeof(DIMENSIONS));
         d1    = (DIMENSIONS *)MyCalloc(1,sizeof(DIMENSIONS));
         dimen = (DIMENSIONS *)MyCalloc(1,sizeof(DIMENSIONS));
+ 
+        /* Compute units for eigenvalues */
 
-        for( ii=1; ii<=iNoEigen; ii++ ) {
-             UnitsMultRep( dimen, &(spA->spRowUnits[ii-1]), &(spA->spColUnits[ii-1]) );
-             UnitsMultRep(    d1, &(spB->spRowUnits[ii-1]), &(spB->spColUnits[ii-1]) );
-             UnitsDivRep( &(spEigen->spColUnits[ii-1]), dimen, d1, NO );
-             spEigen->spColUnits[ii-1].units_type = UNITS_TYPE;
-        }
-        ZeroUnits( &(spEigen->spRowUnits[0]) );
-        ZeroUnits( d1 );
-        dimen = UnitsMultRep( dimen, &(spA->spRowUnits[0]), &(spA->spColUnits[0]) );
-        for( ii=1; ii<=iSize; ii++ ) {
-             UnitsMultRep( d, &(spA->spRowUnits[ii-1]), &(spA->spColUnits[0]) );
-             if( d->length_expnt < dimen->length_expnt ||
-		 d->mass_expnt   < dimen->mass_expnt   ||
-		 d->time_expnt   < dimen->time_expnt   ||
-		 d->temp_expnt   < dimen->temp_expnt   )
-		 UnitsCopy( dimen, d );
-        }
-        for( ii=1; ii<=iSize; ii++ ) {
-             UnitsMultRep( d, &(spA->spRowUnits[ii-1]), &(spA->spColUnits[0]) );
-             UnitsDivRep( &(spEigen->spRowUnits[ii]), dimen, d, NO );
-             spEigen->spRowUnits[ii].units_type = UNITS_TYPE;
-        }
+       for( ii=1; ii<=iNoEigen; ii++ ) {
+            UnitsMultRep( dimen, &(spA->spRowUnits[ii-1]), &(spA->spColUnits[ii-1]) );
+            UnitsMultRep(    d1, &(spB->spRowUnits[ii-1]), &(spB->spColUnits[ii-1]) );
+            UnitsDivRep( &(spEigen->spColUnits[ii-1]), dimen, d1, NO );
+            spEigen->spColUnits[ii-1].radian_expnt = 0;
+            spEigen->spColUnits[ii-1].units_type   = UnitsType;
+       }
 
-        SetUnitsOn();
+       /* Compute units for Eigenvectors */
 
-        free((char *)d->units_name);
-        free((char *)d);
-        free((char *)d1->units_name);
-        free((char *)d1);
-        free((char *)dimen->units_name);
-        free((char *)dimen);
+       ZeroUnits( &(spEigen->spRowUnits[0]) );
+       ZeroUnits( d1 );
+
+       for( ii=1; ii<=iSize; ii++ ) {
+           UnitsMultRep( dimen, &(spA->spRowUnits[ii-1]), &(spA->spColUnits[ii-1]) );
+           UnitsMultRep(    d1, &(spB->spRowUnits[ii-1]), &(spB->spColUnits[ii-1]) );
+           UnitsMultRep(     d, &(spEigen->spColUnits[0]), d1 );
+           UnitsDivRep( &(spEigen->spRowUnits[ii]), d, dimen, NO );
+           spEigen->spRowUnits[ii].units_type = UnitsType;
+       }
+
+       SetUnitsOn();
+
+       free((char *)d->units_name);
+       free((char *)d);
+       free((char *)d1->units_name);
+       free((char *)d1);
+       free((char *)dimen->units_name);
+       free((char *)dimen);
     }
+
+#ifdef DEBUG
+       printf("*** In Solve_Eigen() : End Units Calculation \n");
+#endif 
 
     MatrixFree( spEigenvalue );
     MatrixFree( spEigenvector );
 
     return( spEigen );
 }
+
+/*
+ *  ====================================================
+ *  Extract_Eigenvalue() : Extract Eigenvalues from spA.
+ *
+ *  ====================================================
+ */
 
 #ifdef __STDC__
 MATRIX *Extract_Eigenvalue( MATRIX *spA )
@@ -3000,6 +3029,12 @@ int  length;
     return( spB );
 }
 
+/*
+ *  ======================================================
+ *  Extract_Eigenvector() : Extract Eigenvectors from spA.
+ *
+ *  ======================================================
+ */
 
 #ifdef __STDC__
 MATRIX *Extract_Eigenvector( MATRIX *spA )

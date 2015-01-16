@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *     fe_checkmemory.c : Check and Reallocate Memory for Frame Data Structure
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  fe_checkmemory.c : Check and Reallocate Memory for Frame Data Structure
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -29,11 +30,10 @@
 #include "defs.h"
 #include "units.h"
 #include "matrix.h"
-#include "vector.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "code.h"
-#include "y.tab.h"
+#include "vector.h"
+#include "fe_functions.h"
 
 /*
 #define DEBUG
@@ -371,80 +371,3 @@ int      UNITS_SWITCH;
  
   return(frp);
 }
- 
-/* ==================== */
-/* Check material space */
-/* ==================== */
-/**********************************************************
- 
-#ifdef __STDC__
-EFRAME *CheckMaterialsSpace(EFRAME *frp, int mate_no)
-#else
-EFRAME *CheckMaterialsSpace(frp, mate_no)
-EFRAME *frp;
-int    mate_no;
-#endif
-{
-MATL   *mate; 
-int    i;
-
-#ifdef DEBUG
-       printf("*** Enter CheckMaterialSpace()");
-       printf(" : mate_no = %4d : max_no_materials = %4d\n", mate_no, max_no_materials);
-#endif
-
-    if(mate_no > max_no_materials) {
-       frp->material = (MATL *) realloc(frp->material,
-                      (mate_no + max_no_materials)*sizeof(MATL));
- 
-       for(i= max_no_materials + 1 ; i <= mate_no + max_no_materials; i++){
-           mate = &frp->material[i-1];
-           mate->d = dVectorAlloc(12);
-       }
-       max_no_materials += mate_no;
-    }
-
-#ifdef DEBUG
-       printf("*** Enter CheckMaterialSpace()\n");
-#endif
-    return(frp);
-}
-**********************************************************/
-
-/* ================= */
-/* Check Etype space */
-/* ================= */
- 
-/**********************************************************
-#ifdef __STDC__
-EFRAME *CheckEtypesSpace(EFRAME *frp, int etype_no)
-#else
-EFRAME *CheckEtypesSpace(frp, etype_no)
-EFRAME *frp;
-int    etype_no;
-#endif
-{
-ETYPE  *etp;
-int    i;
-
-#ifdef DEBUG
-       printf("*** Enter CheckEtypesSpace()");
-       printf(" : etype_no = %4d : max_no_etypes = %4d\n", etype_no, max_no_etypes);
-#endif
- 
-    if(etype_no > max_no_etypes) {
-       frp->etype = (ETYPE *) realloc(frp->etype, (etype_no + max_no_etypes)*sizeof(ETYPE));
- 
-       for(i= max_no_etypes + 1 ; i <= etype_no; i++){
-           etp = &frp->etype[i-1];
-           etp->iedof = iVectorAlloc(6);
-       }
-       max_no_etypes += etype_no;
-    }
-
-#ifdef DEBUG
-       printf("*** Leave CheckEtypesSpace()\n");
-#endif
-    return(frp);
-}
-************************/

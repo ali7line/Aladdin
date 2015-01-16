@@ -8,7 +8,7 @@
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -58,9 +58,9 @@ typedef struct Symbtab_element {
 	struct  Symbtab_element	*next;
 } SYMBOL;
 
-extern SYMBOL     *build_table();
-extern SYMBOL     *install();
-extern SYMBOL     *lookup();
-extern void        print_symtable();
+SYMBOL     *build_table();
+SYMBOL     *install();
+SYMBOL     *lookup();
+void        print_symtable();
 
 #endif /* end case SYMBOL_H */

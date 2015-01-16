@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               main.c : Check the input type
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  main.c : Check the input type
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,22 +20,22 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
+
 #include <stdio.h>       
 #include <ctype.h>		
 #include <signal.h>
 #include <setjmp.h>	
 
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
 #include "code.h"
-#include "miscellaneous.h"
-#include "fe_functions.h"
 
 /* Declarations global frame and working element data structures */
 
@@ -57,7 +58,15 @@ char *argv[];
 int    c;
 int    a=0, b=0;
 void   fpecatch();
+void   set_default_values();
+void   set_print_output();
 char **p;
+
+   /* [0] : codes for running on FreeBSD platform */
+
+#ifdef __FreeBSD__
+   fpsetmask (0);
+#endif
 
    /* [a] : Read flags and options from command input */
 
@@ -132,16 +141,14 @@ char **p;
                      break;
 	   }
 
-   /* [d] : Load grammar, materials and AISC sections into symbol table */
+   /* [d] : Set Output Flags */
+
+      set_default_values();
+      set_print_output();
+
+   /* [e] : Load grammar, materials and AISC sections into symbol table */
 
       Init_Problem();
-   /* Load_AISC_Sections(); Temporarily removed */
-   /* Load_AISC_Material(); Temporarily removed */
-
-   /* [e] : Set Output Flags */
-
-      set_print_output();
-      set_default_values();
 
    /* [f] : Run Problem */
       

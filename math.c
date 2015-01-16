@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               math.c : Math Functions
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  math.c : Math Functions
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, and Wane-Jang Lin                      December 1995
+ *  Written by: Mark Austin, and Wane-Jang Lin                           May 1997
  *  ============================================================================= 
  */
 
@@ -27,15 +28,15 @@
 #include <math.h>
 #include <errno.h>
 #include <stddef.h>
-#include "units.h"
-#include "miscellaneous.h"
 #include "defs.h"
+#include "miscellaneous.h"
+#include "units.h"
 
 /*
 #define DEBUG
 */
 
-extern	int errno;
+extern int errno;
 
 double	errcheck();
 

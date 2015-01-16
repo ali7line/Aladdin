@@ -4,7 +4,9 @@
 /*  Test control flow and conditional operations              */
 /*  ========================================================  */
 
-print "\n ======= QUANTITY LOGIC OPERATIONS ======== \n";
+print  "======================================\n";
+print  "*** Test Operations for Quantity Logic\n";
+print  "======================================\n\n";
 
 X1 = 1  m;
 X2 = 10 m;
@@ -247,5 +249,10 @@ print "\n ======= TURN OFF/ON Units ======== \n";
 
 print "\n Use < SetUnitsOff > to Turn Off Units Option \n";
 print "\n Use < SetUnitsOn > to Turn On Units Option \n";
-print "\n The Default Units Option is < SetUnitsOn > \n";
+print "\n The Default Units Option is < SetUnitsOn > \n\n";
 
+print  "=======================\n";
+print  "*** End of Control Test\n";
+print  "=======================\n\n";
+
+quit;

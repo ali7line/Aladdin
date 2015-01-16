@@ -1,6 +1,7 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
+ *  ALADDIN Version 2.0 :
+ *                                                                     
  *      elmt_set_attr.c : Set Element Attributes
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -28,17 +29,15 @@
 #include <stdlib.h>
 
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
 #include "fe_functions.h"
 #include "elmt.h"
-#include "miscellaneous.h"
 
-/*
-#define DEBUG 
-*/
+enum { ATTR = 20 };  /* Array of element attributes */
 
 #ifdef __STDC__
 EFRAME *Set_Elmt_Attrs(EFRAME *frame)
@@ -54,32 +53,31 @@ MATERIAL_ATTR  *map;
 FIBER_ELMT     *fep;
 
 char      *eap_name;
-char    *attr_array[ATTR];
+char    *attr_array[ ATTR ];
 char      *new_attr;
 int     i, j = 0, k;
 int   flag, elmt_attr_no;
+int     total_fiber;
+int    UNITS_SWITCH;
 
-int      fiber_integ_pt;
+int     no_integ_pt;
 SYMBOL         *slp;
 
 #ifdef DEBUG
        printf("*** Enter Set_Elmt_Attrs() : frame->no_elements = %5d\n", frame->no_elements);
 #endif
 
+    UNITS_SWITCH = CheckUnits();
+
     /* =======================================================*/
     /*  Get Element Attr : section and material properties    */ 
     /*                     for all elements from Hash Nodes   */
     /* =======================================================*/
 
-    for( k=1; k<=ATTR ; k++ )
-        attr_array[k-1] = (char *)NULL;
+    for( k=1; k <= ATTR ; k++ )
+        attr_array[k-1] = (char *) NULL;
 
-    slp = lookup("GaussIntegPts"); /* section no.(integration pts) along element */
-    if(slp == NULL)
-       fiber_integ_pt = UNIT_INTEG_PTS;        /* 2 as default */
-    else
-       fiber_integ_pt = (int) slp->u.q->value;
-
+    no_integ_pt = frame->no_integ_pt;
     for(i=1; i<=frame->no_elements; i++) {
 
        /* [a] : Lookup Element, Section, and Material Attributes */ 
@@ -89,6 +87,7 @@ SYMBOL         *slp;
        if(eap == NULL) {
           FatalError("Elmt_Attribute name not found",(char *)NULL);
        }
+
 #ifdef DEBUG
        printf(" In Set_Elmt_Attrs() : eap->section = %s \n", eap->section);
 #endif
@@ -104,7 +103,8 @@ SYMBOL         *slp;
        }
 
        fep = (FIBER_ELMT *)NULL;
-       if( !(strcmp(eap->elmt_type, "FIBER")) ) {
+       if( !(strcmp(eap->elmt_type, "FIBER_2D"))  || !(strcmp(eap->elmt_type, "FIBER_3D"))
+       ||  !(strcmp(eap->elmt_type, "FIBER_2DS")) || !(strcmp(eap->elmt_type, "FIBER_3DS")) ) {
           fep = lookup(eap->fiber_attr_name)->u.fep;
           if(fep == NULL) {
               FatalError("Fiber_Elmt_Attr name not found",(char *)NULL);
@@ -158,35 +158,50 @@ SYMBOL         *slp;
 
        /* allocate space for response and element state in the fiber element */
 
-       if( !(strcmp(eap->elmt_type, "FIBER")) ) {
-	 frame->element[i-1].rp->Q_saved = MatrixAllocIndirect("Q_saved", DOUBLE_ARRAY, 3, 1);
-	 frame->element[i-1].rp->q_saved = MatrixAllocIndirect("q_saved", DOUBLE_ARRAY, 3, 1);
-	 frame->element[i-1].rp->sr_saved = MatrixAllocIndirect("sr_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
-	 frame->element[i-1].rp->er_saved = MatrixAllocIndirect("sr_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
-	 frame->element[i-1].rp->s0_saved = MatrixAllocIndirect("s0_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
-	 frame->element[i-1].rp->e0_saved = MatrixAllocIndirect("e0_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
-	 frame->element[i-1].rp->sx_saved = MatrixAllocIndirect("sx_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
-	 frame->element[i-1].rp->ex_saved = MatrixAllocIndirect("ex_saved",
-	        DOUBLE_ARRAY, fiber_integ_pt+2, fep->no_fiber+2);
+       if( !(strcmp(eap->elmt_type, "FIBER_2D"))  || !(strcmp(eap->elmt_type, "FIBER_3D")) 
+       ||  !(strcmp(eap->elmt_type, "FIBER_2DS")) || !(strcmp(eap->elmt_type, "FIBER_3DS")) ) {
+         if( UNITS_SWITCH == ON )
+            SetUnitsOff();
+         if( !(strcmp(eap->elmt_type, "FIBER_2D")) || !(strcmp(eap->elmt_type, "FIBER_2DS")) ) {
+	   frame->element[i-1].rp->Q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 3, 1);
+	   frame->element[i-1].rp->q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 3, 1);
+         }
+         else {
+	   frame->element[i-1].rp->Q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 5, 1);
+	   frame->element[i-1].rp->q_saved = MatrixAllocIndirect( (char *)NULL, DOUBLE_ARRAY, 5, 1);
+         }
+
+         total_fiber = fep->no_fiber + (frame->no_dimen-1)*fep->no_shear;
+	 frame->element[i-1].rp->sr_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+	 frame->element[i-1].rp->er_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+	 frame->element[i-1].rp->s0_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+	 frame->element[i-1].rp->e0_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+	 frame->element[i-1].rp->sx_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+	 frame->element[i-1].rp->ex_saved = MatrixAllocIndirect( (char *)NULL,
+	        DOUBLE_ARRAY, no_integ_pt+2, total_fiber );
+
 	 frame->element[i-1].esp->yielding_saved =
-		(int **)MyCalloc( fiber_integ_pt+2, sizeof(int *) );
+		(int **)MyCalloc( no_integ_pt+2, sizeof(int *) );
 	 frame->element[i-1].esp->pre_range_saved =
-		(int **)MyCalloc( fiber_integ_pt+2, sizeof(int *) );
+		(int **)MyCalloc( no_integ_pt+2, sizeof(int *) );
 	 frame->element[i-1].esp->pre_load_saved =
-		(int **)MyCalloc( fiber_integ_pt+2, sizeof(int *) );
-	 for( k=1 ; k <= fiber_integ_pt+2 ; ++k ) {
+		(int **)MyCalloc( no_integ_pt+2, sizeof(int *) );
+	 for( k=1 ; k <= no_integ_pt+2 ; ++k ) {
 	   frame->element[i-1].esp->yielding_saved[k-1] =
-		  (int *)MyCalloc( fep->no_fiber+2, sizeof(int) );
+		  (int *)MyCalloc( total_fiber, sizeof(int) );
 	   frame->element[i-1].esp->pre_range_saved[k-1] =
-		  (int *)MyCalloc( fep->no_fiber+2, sizeof(int) );
+		  (int *)MyCalloc( total_fiber, sizeof(int) );
 	   frame->element[i-1].esp->pre_load_saved[k-1] =
-		  (int *)MyCalloc( fep->no_fiber+2, sizeof(int) );
+		  (int *)MyCalloc( total_fiber, sizeof(int) );
 	 }
+
+         if( UNITS_SWITCH == ON )
+            SetUnitsOn();
        } /* allocate response and state for fiber element */
     }
 

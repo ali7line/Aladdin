@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               elmt.h : Definitions for finite element library.
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  elmt.h : Definitions for finite element library.
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -28,45 +29,55 @@
 
 /* element library functions */
 
-extern ARRAY     *elmlib();
-extern ARRAY     *elmt_fiber();
-extern ARRAY     *elmt_frame_2d();
-extern ARRAY     *elmt_frame_3d();
-extern ARRAY     *elmt_psps();
-extern ARRAY     *elmt_plate();
-extern ARRAY     *elmt_shell_4nodes_q();   /* Shell Element with Drill DOF */
-extern ARRAY     *elmt_shell();            /* X.G. shell element, 4 node   */
-extern ARRAY     *elmt_shell_8n();         /* X.G. shell element, 8 node   */
+ARRAY     *elmlib();
+ARRAY     *elmt_frame_2d();
+ARRAY     *elmt_frame_3d();
+ARRAY     *elmt_psps();
+ARRAY     *elmt_plate();
+ARRAY     *elmt_shell_4n_q();   /* Shell Element with Drill DOF */
+ARRAY     *elmt_shell_4n();     /* X.G. shell element, 4 node   */
+ARRAY     *elmt_shell_8n();     /* X.G. shell element, 8 node   */
+ARRAY     *elmt_fiber_2d();     /* 2-D fiber element with one global shear spring */
+ARRAY     *elmt_fiber_3d();     /* 3-D fiber element with two global shear springs */
+ARRAY     *elmt_fbeam_2d();     /* 2-D flexible beam */
 
-/* Equivalent Loading Procedure for elements */
+/* element properties handling */
 
-extern ARRAY     *sld01();   /* elmt_psps.c : PLANE_STRAIN and PLANE_STRESS */
-extern ARRAY     *sld02();   /* elmt_fiber.c : FIBER */
-extern ARRAY     *sld04();   /* elmt_shell_4n.c : SHELL_4N and SHELL_4NQ */
-extern ARRAY     *sld05();   /* elmt_frame3d.c : FRAME_3D */
-extern ARRAY     *sld07();   /* elmt_frame2d.c : FRAME_2D */
-extern ARRAY     *sld08();   /* elmt_plate.c   : DKT_PLATE */
-extern ARRAY     *sld108();  /* elmt_shell_8n.c : SHELL_8N */
+EFRAME    *assign_properties();
+void       print_property_frame_2d();
+void       print_property_frame_3d();
+void       print_property_psps();
+void       print_property_plate();
+void       print_property_shell_4n();
+void       print_property_shell_4n_q();
+void       print_property_shell_8n();
+void       print_property_fiber_2d();
+void       print_property_fiber_3d();
+void       print_property_fbeam_2d();
 
 /* Generic Template for Item in Finite Element Library */
 
 static struct {
 	char                 *name;         /* name of elment type                      */
         ARRAY  *(*elmt_lib_func)();         /* pointer to elmt library function         */
-        ARRAY  *(*elmt_sld_func)();         /* pointer to elmt library sld0*() function */
+        void       (*elmt_print)();         /* pointer to elmt library print function   */
         int                 no_dof;         /* No dof per node                          */
         int       no_node_per_elmt;         /* No nodes per element                     */
         int               no_dimen;         /* No dimension of problem                  */
 	} elmt_library[] = {
-		"FRAME_2D",          elmt_frame_2d,          sld07,  3, 2, 2,
-		"FRAME_3D",          elmt_frame_3d,          sld05,  6, 2, 3,
-                "SHELL_4N",          elmt_shell,             sld04,  5, 4, 3,
-                "SHELL_4NQ",         elmt_shell_4nodes_q,    sld04,  6, 4, 3,
-                "SHELL_8N",          elmt_shell_8n,          sld108, 5, 8, 3,
-		"PLANE_STRAIN",      elmt_psps,              sld01,  2, 4, 2,
-		"PLANE_STRESS",      elmt_psps,              sld01,  2, 4, 2,
-        	"DKT_PLATE",         elmt_plate,             sld08,  3, 4, 3,
-        	"FIBER",             elmt_fiber,             sld02,  3, 2, 2,
+           "FRAME_2D",        elmt_frame_2d,    print_property_frame_2d,   3, 2, 2,
+           "FRAME_3D",        elmt_frame_3d,    print_property_frame_3d,   6, 2, 3,
+           "SHELL_4N",        elmt_shell_4n,    print_property_shell_4n,   5, 4, 3,
+           "SHELL_4NQ",       elmt_shell_4n_q,  print_property_shell_4n_q, 6, 4, 3,
+           "SHELL_8N",        elmt_shell_8n,    print_property_shell_8n,   5, 8, 3,
+           "PLANE_STRAIN",    elmt_psps,        print_property_psps,       2, 4, 2,
+           "PLANE_STRESS",    elmt_psps,        print_property_psps,       2, 4, 2,
+           "DKT_PLATE",       elmt_plate,       print_property_plate,      3, 4, 3,
+           "FIBER_2D",        elmt_fiber_2d,    print_property_fiber_2d,   3, 2, 2,
+           "FIBER_3D",        elmt_fiber_3d,    print_property_fiber_3d,   6, 2, 3,
+           "FIBER_2DS",       elmt_fiber_2d,    print_property_fiber_2d,   3, 2, 2,
+           "FIBER_3DS",       elmt_fiber_3d,    print_property_fiber_3d,   6, 2, 3,
+	   "FBEAM_2D",        elmt_fbeam_2d,    print_property_fbeam_2d,   3, 2, 2,
 	};
 
 #define NO_ELEMENTS_IN_LIBRARY (sizeof(elmt_library)/sizeof(elmt_library[0]))
@@ -75,33 +86,17 @@ static struct {
 /* Cases for Element Library */
 /* ------------------------- */
 
-#define PROPTY           1 
-#define CHERROR          2   
-#define ELMT_S_MAT       3
-#define STIFF            3 
-#define AXISYM           3
-#define STRESS           4
-                                        /* #define MASS           5  */
-#define LOAD             6
-#define PRESSLD          7
-#define STRESS_LOAD      8
-#define EQUIV_NODAL_LOAD 9
-
-#define ATTR           15
-
-/* ======================== */
-/* element_type definitions */
-/* ======================== */
-
-#define NO_ELEMENT_TYPES 6
-
-#define COLUMN         1
-#define BEARING        2
-#define GIRDER         3
-#define SHEARGIRDER    4
-#define DISSIPATOR     5
-#define BRACE          6
-#define GRID           9 
-#define STOREY        10 
+#define PROPTY             1 
+#define CHERROR            2   
+#define STIFF              3 
+#define STRESS             4
+#define STRESS_MATRIX      5
+#define MASS_MATRIX        6 
+#define LOAD_MATRIX        7
+#define PRESSLD            8
+#define STRESS_LOAD        9
+#define EQUIV_NODAL_LOAD  10
+#define STRESS_UPDATE     11
 
 #endif /* end case ELMT_H */
+

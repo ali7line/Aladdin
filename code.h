@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               code.h : Declarations for Stack Machine
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  code.h : Declarations for Stack Machine
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -122,6 +123,7 @@ int     Quantity_Div();
 int     Quantity_Affirm();
 int     Quantity_Negate();
 int     Quantity_Power();
+int     Quantity_Mod();
 int     Quantity_Gt();
 int     Quantity_Lt();
 int     Quantity_Eq();
@@ -159,8 +161,8 @@ int      Bltin_Section_Attr();
 int      Bltin_Material_Attr();
 int      Bltin_Fiber_Attr();
 
-int      Bltin_Print_Displ();
-int      Bltin_Update_Resp();
+int      Bltin_Fe_Function();
+int      Bltin1_Fe_Function();
 
 int      Bltin_Units_Type();
 

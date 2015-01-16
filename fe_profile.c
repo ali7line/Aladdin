@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *         fe_profile.c : Major fuctions for FE Profiler
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  fe_profile.c : Major fuctions for FE Profiler
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -28,14 +29,14 @@
 #include <string.h>
 #include <math.h>
 
-#include "units.h"
 #include "defs.h"
+#include "miscellaneous.h"
+#include "units.h"
 #include "matrix.h"
-#include "vector.h"
 #include "fe_database.h"
 #include "symbol.h"
+#include "vector.h"
 #include "elmt.h"
-#include "miscellaneous.h"
 
 /*
 #define DEBUG 
@@ -68,7 +69,7 @@ int nmin;
        printf("                    : frame->no_nodes = %4d \n", frame->no_nodes);
 #endif
 
-   prt = PRINT_PROFILE; /* PRINT_PROFILE = YES has been set in */
+   prt = PRINT_PROFILE; /* PRINT_PROFILE = ON  has been set in */
                         /* fe_setflags.c prt = PRINT_PROFILE;  */
                         /* option allows profile to be printed */
                         /* all the time                        */
@@ -134,7 +135,7 @@ int nmin;
     *  ===============
     */ 
 
-   if(prt != YES)
+   if(prt != ON)
       return (frame);
 
    printf("\n");
@@ -346,7 +347,8 @@ int                      iThicknessIntegPts;
 int                           iNO_INTEG_pts;
 
 #ifdef DEBUG
-       printf("Enter Assign_p_Array() : elmt = %4d : task = %4d\n", elmt_no, task);
+       printf("Enter Assign_p_Array() : elmt_no    = %4d : task = %4d\n", elmt_no, task);
+       printf("Enter Assign_p_Array() : p->elmt_no = %4d\n", p->elmt_no );
 #endif
 
    UNITS_SWITCH = CheckUnits();
@@ -370,20 +372,12 @@ int                           iNO_INTEG_pts;
 
    iNO_INTEG_pts = iInPlaneIntegPts*iThicknessIntegPts;
 
-   slp = lookup("GaussIntegPts"); /* number of integration pts in thickness direction*/
-   if(slp == NULL){
-      p->integ_ptr->integ_pts = UNIT_INTEG_PTS; /* 2 as default */
-   }
-   else {
-      p->integ_ptr->integ_pts = (int) slp->u.q->value;
-   }
-
    el              = &frp->element[elmt_no-1];  /* element ptr               */
    elmt_attr_no    =  el->elmt_attr_no;
    eap             = &frp->eattr[elmt_attr_no -1]; 
    p->elmt_state   =  el->esp->state;
 
-   for (i = 0; i <= NO_ELEMENTS_IN_LIBRARY; i++) { 
+   for (i = 0; i < NO_ELEMENTS_IN_LIBRARY; i++) { 
       if(!strcmp(elmt_library[i].name, eap->elmt_type)) { 
            n = i;
            break;
@@ -452,6 +446,26 @@ int                           iNO_INTEG_pts;
                  = el->LC_ptr->back_stress[i-1][j-1];
          }
 
+	 /* Assign work fiber attribution in frame to p array */
+	 if( !(strcmp(p->elmt_type, "FIBER_2D"))  || !(strcmp(p->elmt_type, "FIBER_3D"))
+	  || !(strcmp(p->elmt_type, "FIBER_2DS")) || !(strcmp(p->elmt_type, "FIBER_3DS")) ) {
+            p->integ_ptr->integ_pts = frp->no_integ_pt;
+	    /* Use the data stored in frame DIRECTLY , use carefully, do not free them */
+	    p->fiber_ptr = eap->work_fiber;
+
+	    p->Q_saved  = el->rp->Q_saved;
+	    p->q_saved  = el->rp->q_saved;
+	    p->sr_saved = el->rp->sr_saved;
+	    p->er_saved = el->rp->er_saved;
+	    p->s0_saved = el->rp->s0_saved;
+	    p->e0_saved = el->rp->e0_saved;
+	    p->sx_saved = el->rp->sx_saved;
+	    p->ex_saved = el->rp->ex_saved;
+
+	    p->yielding_saved  = el->esp->yielding_saved;
+	    p->pre_range_saved = el->esp->pre_range_saved;
+	    p->pre_load_saved  = el->esp->pre_load_saved;
+	 }
       }
    }
 
@@ -842,6 +856,27 @@ int                           iNO_INTEG_pts;
                 for(i = 1; i <= 6; i++)
                     p->LC_ptr->back_stress[i-1][j-1] = el->LC_ptr->back_stress[i-1][j-1];
             }
+
+	    /* Assign work fiber attribution in frame to p array */
+	    if( !(strcmp(p->elmt_type, "FIBER_2D"))  || !(strcmp(p->elmt_type, "FIBER_3D"))
+	     || !(strcmp(p->elmt_type, "FIBER_2DS")) || !(strcmp(p->elmt_type, "FIBER_3DS")) ) {
+               p->integ_ptr->integ_pts = frp->no_integ_pt;
+	       /* Use the data stored in frame DIRECTLY , use carefully, do not free them */
+	       p->fiber_ptr = eap->work_fiber;
+
+	       p->Q_saved  = el->rp->Q_saved;
+	       p->q_saved  = el->rp->q_saved;
+	       p->sr_saved = el->rp->sr_saved;
+	       p->er_saved = el->rp->er_saved;
+	       p->s0_saved = el->rp->s0_saved;
+	       p->e0_saved = el->rp->e0_saved;
+	       p->sx_saved = el->rp->sx_saved;
+	       p->ex_saved = el->rp->ex_saved;
+
+	       p->yielding_saved  = el->esp->yielding_saved;
+	       p->pre_range_saved = el->esp->pre_range_saved;
+	       p->pre_load_saved  = el->esp->pre_load_saved;
+	    }
 	break;
 
        case STIFF:

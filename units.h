@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *              units.h : Data Structures for Engineering Quantities
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  units.h : Data Structures for Engineering Quantities
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system, 
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin and Xiaoguang Chen                      December 1995
+ *  Written by: Mark Austin and Xiaoguang Chen                           May 1997
  *  ============================================================================= 
  */
 
@@ -44,10 +45,11 @@
 typedef struct dimensional_exponents {
         char         *units_name; /* units name              */
         double      scale_factor; /* scale/conversion factor */
-        double      length_expnt;
-        double        mass_expnt;
-        double        time_expnt;
+        double      length_expnt; /* length                  */
+        double        mass_expnt; /* mass                    */
+        double        time_expnt; /* time                    */
         double        temp_expnt; /* temperature             */
+        double      radian_expnt; /* planar angle            */
         int           units_type; /* US or SI units          */
 } DIMENSIONS;
 
@@ -60,75 +62,67 @@ typedef struct engineering_quantity {
 
 #ifdef __STDC__
 
-extern int            SameUnits( DIMENSIONS *, DIMENSIONS * );
-extern DIMENSIONS    *UnitsMult( DIMENSIONS *, DIMENSIONS * );
-extern DIMENSIONS    *UnitsMultRep( DIMENSIONS *, DIMENSIONS *, DIMENSIONS * );
-extern DIMENSIONS    *UnitsDiv( DIMENSIONS *, DIMENSIONS *, int );
-extern DIMENSIONS    *UnitsDivRep( DIMENSIONS *, DIMENSIONS *, DIMENSIONS *, int );
-extern DIMENSIONS    *UnitsPower( DIMENSIONS *, double , int );
-extern DIMENSIONS    *UnitsPowerRep( DIMENSIONS *, DIMENSIONS *, double , int );
-extern DIMENSIONS    *UnitsCopy( DIMENSIONS *, DIMENSIONS * );
-extern DIMENSIONS    *ZeroUnits( DIMENSIONS * );
-extern DIMENSIONS    *DefaultUnits( char * );
-extern DIMENSIONS    *UnitsSimplify( DIMENSIONS * );
-extern DIMENSIONS    *RadUnitsSimplify( DIMENSIONS * );
+int            SameUnits( DIMENSIONS *, DIMENSIONS * );
+DIMENSIONS    *UnitsMult( DIMENSIONS *, DIMENSIONS * );
+DIMENSIONS    *UnitsMultRep( DIMENSIONS *, DIMENSIONS *, DIMENSIONS * );
+DIMENSIONS    *UnitsDiv( DIMENSIONS *, DIMENSIONS *, int );
+DIMENSIONS    *UnitsDivRep( DIMENSIONS *, DIMENSIONS *, DIMENSIONS *, int );
+DIMENSIONS    *UnitsPower( DIMENSIONS *, double , int );
+DIMENSIONS    *UnitsPowerRep( DIMENSIONS *, DIMENSIONS *, double , int );
+DIMENSIONS    *UnitsCopy( DIMENSIONS *, DIMENSIONS * );
+DIMENSIONS    *ZeroUnits( DIMENSIONS * );
+DIMENSIONS    *DefaultUnits( char * );
+DIMENSIONS    *UnitsSimplify( DIMENSIONS * );
+DIMENSIONS    *RadUnitsSimplify( DIMENSIONS * );
 
-extern void           UnitsPrint( DIMENSIONS * );
-extern int            UnitsLength( char *, ... );
+void           UnitsPrint( DIMENSIONS * );
+int            UnitsLength( char *, ... );
 
-extern DIMENSIONS    *UnitsTypeConvert( DIMENSIONS * , int );
-extern DIMENSIONS     UnitsScaleConvert( DIMENSIONS , int );
-extern double         ConvertTempUnits( char *, double, int );
+DIMENSIONS    *UnitsTypeConvert( DIMENSIONS * , int );
+DIMENSIONS     UnitsScaleConvert( DIMENSIONS , int );
+double         ConvertTempUnits( char *, double, int );
 
-extern DIMENSIONS    *BufferInit( int );
-extern void           BufferPrint( char *, DIMENSIONS *, int );
+DIMENSIONS    *BufferInit( int );
+void           BufferPrint( char *, DIMENSIONS *, int );
 
 int       SetUnitsOn();
 int       SetUnitsOff();
 int       CheckUnits();
 int       CheckUnitsType();
 
-/*----------------------------------------------*/
-
-extern QUANTITY          *QuantityUnitsLess( QUANTITY * );
-
-/*----------------------------------------------*/
+QUANTITY          *QuantityUnitsLess( QUANTITY * );
 
 #else  /* start case not STDC */
 
-extern int            SameUnits();
-extern DIMENSIONS    *UnitsMult();
-extern DIMENSIONS    *UnitsMultRep();
-extern DIMENSIONS    *UnitsDiv();
-extern DIMENSIONS    *UnitsDivRep();
-extern DIMENSIONS    *UnitsPower();
-extern DIMENSIONS    *UnitsPowerRep();
-extern DIMENSIONS    *UnitsCopy();
-extern DIMENSIONS    *ZeroUnits();
-extern DIMENSIONS    *DefaultUnits();
-extern DIMENSIONS    *UnitsSimplify();
-extern DIMENSIONS    *RadUnitsSimplify();
+int            SameUnits();
+DIMENSIONS    *UnitsMult();
+DIMENSIONS    *UnitsMultRep();
+DIMENSIONS    *UnitsDiv();
+DIMENSIONS    *UnitsDivRep();
+DIMENSIONS    *UnitsPower();
+DIMENSIONS    *UnitsPowerRep();
+DIMENSIONS    *UnitsCopy();
+DIMENSIONS    *ZeroUnits();
+DIMENSIONS    *DefaultUnits();
+DIMENSIONS    *UnitsSimplify();
+DIMENSIONS    *RadUnitsSimplify();
 
-extern void           UnitsPrint();
-extern int            UnitsLength();
+void           UnitsPrint();
+int            UnitsLength();
 
-extern DIMENSIONS    *UnitsTypeConvert();
-extern DIMENSIONS     UnitsScaleConvert();
-extern double         ConvertTempUnits();
+DIMENSIONS    *UnitsTypeConvert();
+DIMENSIONS     UnitsScaleConvert();
+double         ConvertTempUnits();
 
-extern DIMENSIONS    *BufferInit();
-extern void           BufferPrint();
+DIMENSIONS    *BufferInit();
+void           BufferPrint();
 
 int       SetUnitsOn();
 int       SetUnitsOff();
 int       CheckUnits();
 int       CheckUnitsType();
 
-/*----------------------------------------------*/
-
-extern QUANTITY          *QuantityUnitsLess();
-
-/*----------------------------------------------*/
+QUANTITY *QuantityUnitsLess();
 
 #endif /* end case not STDC */
 #endif /* end case UNITS_H */

@@ -276,7 +276,7 @@
    base_overturning_moments = floor_heights * inertia_forces;
    PrintMatrix( base_overturning_moments );
 
-   mom1 = 0.0 (N*m)^2; mom2 = 0.0 N*m;
+   mom1 = 0.0 N^2*m^2; mom2 = 0.0 N*m;
    for ( ii = 1; ii <= 3; ii = ii + 1 ) {
          mom1 = mom1 + base_overturning_moments[ 1 ][ ii ]^2;
          mom2 = mom2 + abs( base_overturning_moments[ 1 ][ ii ] );

@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *           fe_print.c : Print FE Mesh and Solution
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  fe_print.c : Print FE Mesh and Solution
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,11 +20,9 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
-
-#include <ctype.h>
 
 #ifdef __STDC__
 #include <stdarg.h>
@@ -34,41 +33,35 @@
 #include "defs.h"
 #include "units.h"
 #include "matrix.h"
-#include "vector.h"
 #include "fe_database.h"
 #include "symbol.h"
+#include "vector.h"
 #include "fe_functions.h"
 #include "elmt.h"
-#include "miscellaneous.h"
 
 /* External Declarations for global frame/working element data structures */
 
 extern ARRAY     *array;
 extern EFRAME    *frame;
 
-/*
-#define DEBUG 
-*/
+/* #define DEBUG */
 
 
 /*
- *  -------------------------
+ *  =========================
  *  Print Finite Element Mesh
- *  -------------------------
+ *  =========================
  */
 
-void Print_Mesh()
-{
+void Print_Mesh() {
 MATRIX  *m = (MATRIX *)NULL;
 NODE                    *np;
 ELEMENT               *elmt;
 ELEMENT_ATTR           *eap;
 RIGID                   *rb;
-
 NODE_LOADS         *nforces;
 ELEMENT_LOADS         *elsp;
 ELOAD_LIB              *elp;
-
 void           (*voidptr)();
 int          iel_no,i,j,k,l;
 int            UNITS_SWITCH;
@@ -103,17 +96,17 @@ int            UNITS_SWITCH;
 
     /* [a] : Print Nodes */
      
-       switch((int) frame->no_dimen) {
-           case 3:
-                printf("\n");
-                printf("----------------------------------------------------------------------------------------------\n");
-                printf("Node#      X_coord          Y_coord          Z_coord        Dx    Dy    Dz    Rx    Ry    Rz\n");
-                printf("----------------------------------------------------------------------------------------------\n");
-                printf("\n");
+    switch((int) frame->no_dimen ) {
+        case 3:
+             printf("\n");
+             printf("============================================================================================\n");
+             printf("Node#      X_coord          Y_coord          Z_coord        Dx    Dy    Dz    Rx    Ry    Rz\n");
+             printf("============================================================================================\n");
+             printf("\n");
 
-                switch( UNITS_SWITCH ) {
-                  case ON:
-                     for(i=1; i <= frame->no_nodes; i++) {
+             switch( UNITS_SWITCH ) {
+                 case ON:
+                      for(i=1; i <= frame->no_nodes; i++) {
                          np = &frame->node[i-1];
                          printf("%5d %13.4e %.3s %13.4e %.3s %13.4e %.3s ", i,
                                  np->coord[0].value/np->coord[0].dimen->scale_factor,
@@ -127,10 +120,10 @@ int            UNITS_SWITCH;
                              printf("%5d ", np->bound_id[j-1]);
 
                          printf("\n");
-                     }
-                     break;
-                  case OFF:
-                     for(i=1; i <= frame->no_nodes; i++) {
+                      }
+                      break;
+                 case OFF:
+                      for(i=1; i <= frame->no_nodes; i++) {
                          np = &frame->node[i-1];
                          printf("%5d %13.4e     %13.4e     %13.4e     ", i,
                                  np->coord[0].value,
@@ -141,74 +134,64 @@ int            UNITS_SWITCH;
                              printf("%5d ", np->bound_id[j-1]);
 
                          printf("\n");
-                     }
-                     break;
+                      }
+                      break;
                   default:
-                     break;
-                }
-                break;
-           case 2:
-                printf("\n");
-                printf("------------------------------------------------------------------------------\n");
-                printf("Node#      X_coord           Y_coord          Tx    Ty    Rz  \n");
-                printf("------------------------------------------------------------------------------\n");
-                printf("\n");
+                      break;
+             }
+             break;
+        case 2:
+             printf("\n");
+             printf("===================================================\n");
+             printf("Node#      X_coord         Y_coord        Tx     Ty\n");
+             printf("===================================================\n");
+             printf("\n");
 
-                switch( UNITS_SWITCH ) {
-                  case ON:
-                     for(i=1;i<=frame->no_nodes; i++) {
-                         np = &frame->node[i-1];
-                         printf("%5d %13.4e %.3s %13.4e %.3s ", i,
-                                 np->coord[0].value/np->coord[0].dimen->scale_factor,
-                                 np->coord[0].dimen->units_name,
-                                 np->coord[1].value/np->coord[1].dimen->scale_factor,
-                                 np->coord[1].dimen->units_name);
-                         for(j=1; j<= frame->no_dof;j++)
-                             printf("%5d ", np->bound_id[j-1]);
-                         printf("\n");
-                     }
-                     break;
-                  case OFF:
-                     for(i=1;i<=frame->no_nodes; i++) {
-                         np = &frame->node[i-1];
-                         printf("%5d %13.4e     %13.4e     ", i, np->coord[0].value, np->coord[1].value);
-                         for(j=1; j<= frame->no_dof;j++)
-                             printf("%5d ", np->bound_id[j-1]);
-                         printf("\n");
-                     }
-                     break;
-                  default:
-                     break;
-                }
-                break;
-           default:
-                printf(">>ERROR : Ndm = %d; should be 2 or 3   \n", frame->no_dimen); 
-                break;
-      }
+             if( UNITS_SWITCH == ON ) {
+                 for(i=1;i<=frame->no_nodes; i++) {
+                     np = &frame->node[i-1];
+                     printf("%5d %13.4e %.3s %13.4e %.3s ", i,
+                             np->coord[0].value/np->coord[0].dimen->scale_factor,
+                             np->coord[0].dimen->units_name,
+                             np->coord[1].value/np->coord[1].dimen->scale_factor,
+                             np->coord[1].dimen->units_name);
+                     for(j=1; j<= frame->no_dof;j++)
+                         printf(" %5d ", np->bound_id[j-1]);
+                     printf("\n");
+                 }
+             } else {
+                 for(i=1;i<=frame->no_nodes; i++) {
+                     np = &frame->node[i-1];
+                     printf("%5d %13.4e     %13.4e     ", i,
+                            np->coord[0].value, np->coord[1].value);
+                     for(j=1; j<= frame->no_dof;j++)
+                         printf("%5d ", np->bound_id[j-1]);
+                     printf("\n");
+                 }
+             }
+             break;
+         default:
+             printf(">>ERROR : Ndm = %d; should be 2 or 3   \n", frame->no_dimen); 
+             break;
+   }
 
-    /* [b] : Print Element Data : frame->node_per_elmt = max nodes per element */
+   /* [b] : Print Element Data : frame->node_per_elmt = max nodes per element */
 
-       printf("\n\n");
-       printf("-----------------------");
+   printf("\n\n");
+   printf("=======================");
+   for(i = 1; i <= frame->no_nodes_per_elmt; i++)
+       printf("===========");
+   printf("=======================\n");
+   printf("Element#     Type      ");
+   for(i=1;i <= frame->no_nodes_per_elmt; i++)
+       printf("   node[%1d]", i);
+   printf("      Element_Attr_Name\n");
+   printf("======================================");
+   for(i=1;i <= frame->no_nodes_per_elmt;i++)
+       printf("==========");
+   printf("============\n\n");
 
-       for(i = 1; i <= frame->no_nodes_per_elmt; i++)
-           printf("-----------");
-
-       printf("-----------------------\n");
-       printf("Element#     Type      ");
-
-       for(i=1;i <= frame->no_nodes_per_elmt; i++)
-           printf("   node[%1d]", i);
-
-       printf("      Element_Attr_Name\n");
-       printf("--------------------------------------");
-	
-       for(i=1;i <= frame->no_nodes_per_elmt;i++)
-           printf("----------");
-
-       printf("------------\n\n");
-
-       for(i=1; i <= frame->no_elements; i++) {
+   for(i=1; i <= frame->no_elements; i++) {
 
            printf("%8d", i);
            elmt = &frame->element[i-1];
@@ -226,7 +209,7 @@ int            UNITS_SWITCH;
        }
        printf("\n");
 
-    /* [c] : Print Rigid Body Data */
+    /* [c] : Print rigid body data */
 
        if(frame->no_rigid >= 1) {
           printf("\n\n");
@@ -268,252 +251,259 @@ int            UNITS_SWITCH;
           }
      }
 
-    /* [c] : Print Material Data */
+    /* [c] : Print material data */
 
-       if(frame->no_element_attr >= 1 ) {
-          printf("--------------------- \n");
-          printf("Element Attribute Data :        \n");
-          printf("--------------------- \n");
+    if(frame->no_element_attr >= 1 ) {
+       printf("====================== \n");
+       printf("Element Attribute Data \n");
+       printf("====================== \n");
 
-          for(i = 1; i <= frame->no_element_attr; i++) {
+       for(i = 1; i <= frame->no_element_attr; i++) {
+           eap = &frame->eattr[i-1];
+           printf("\n\n"); 
+           printf("Element Attribute No %3d : name     = \"%s\" \n ", i, eap->name); 
+           printf("                        : section  = \"%s\" \n", eap->section); 
+           printf("                         : material = \"%s\" \n ", eap->material); 
+           printf("                        : type     = %s\n", eap->elmt_type); 
 
-	      eap = &frame->eattr[i-1];
-              printf("\n\n"); 
-              printf("ELEMENT_ATTR No. %3d  : name = \"%s\" \n ", i, eap->name); 
-              printf("                     : section = \"%s\" \n", eap->section); 
-              printf("                      : material = \"%s\" \n ", eap->material); 
-              printf("                     : type = %s\n", eap->elmt_type); 
-
-              print_property( frame, i );
-          }
-       }
-
-    /* [d] : Print Nodal Forces */
-
-       if(frame->no_node_loads >= 1 && (frame->no_dimen == 2)) {
-
-          printf("                        \n");
-          printf("EXTERNAL NODAL LOADINGS \n");
-          printf("-----------------------------------------------\n");
-
-          nforces = &frame->nforces[0];
-          if(frame->no_dof == 3) {
-             switch( UNITS_SWITCH ) {
-               case ON:
-                   for( i=1 ; i<=frame->no_dof ; i++ )
-                        UnitsSimplify( nforces->fn[i-1].dimen );
-                   printf("Node#        Fx (%s)        Fy (%s)      Mz (%s)\n",nforces->fn[0].dimen->units_name,
-
-                                                                               nforces->fn[1].dimen->units_name,
-                                                                               nforces->fn[2].dimen->units_name);
-                   printf("-----------------------------------------------\n");
-
-                   for(i = 1;i <= frame->no_node_loads; i++) {
-                       nforces = &frame->nforces[i-1];
-                       for( j=1 ; j<=frame->no_dof ; j++ )
-                            UnitsSimplify( nforces->fn[j-1].dimen );
-                       printf("%5d ",(int) nforces->node_f); 
-                       printf(" %12.2f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
-                       printf(" %12.2f ",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
-                       printf(" %12.2f\n",   nforces->fn[2].value/nforces->fn[2].dimen->scale_factor);
-                   }
-                   break;
-                case OFF:
-                   printf("Node#        Fx         Fy       Mz \n");
-                   printf("---------------------------------------\n");
-
-                   for(i = 1;i <= frame->no_node_loads; i++) {
-                       nforces = &frame->nforces[i-1];
-                       printf("%5d ",(int) nforces->node_f); 
-                       printf(" %12.2f ",   nforces->fn[0].value);
-                       printf(" %12.2f ",   nforces->fn[1].value);
-                       printf(" %12.2f\n ",   nforces->fn[2].value);
-                   }
-                   break;
-                default:
-                   break;
-              }
-          }
-          if(frame->no_dof == 2){
-             switch(UNITS_SWITCH) {
-                case ON:
-                   for( i=1 ; i<=frame->no_dof ; i++ )
-                        UnitsSimplify( nforces->fn[i-1].dimen );
-                   printf("Node#        Fx (%s)        Fy (%s)\n",
-                                     nforces->fn[0].dimen->units_name,
-                                     nforces->fn[1].dimen->units_name);
-                  printf("-----------------------------------------------\n");
-                  for(i = 1;i <= frame->no_node_loads; i++) {
-                      nforces = &frame->nforces[i-1];
-                      for( j=1 ; j<=frame->no_dof ; j++ )
-                           UnitsSimplify( nforces->fn[j-1].dimen );
-                      printf("%5d ",(int) nforces->node_f);
-                      printf(" %12.2f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
-                      printf(" %12.2f ",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
-                  }
+           for(j = 0; j <= NO_ELEMENTS_IN_LIBRARY; j++){
+               if(!strcmp(eap->elmt_type, elmt_library[j].name)) {
+                  (*(void (*)()) *(elmt_library[j].elmt_print) )(frame, i);
                   break;
-                  case OFF:
-                      printf("Node#        Fx            Fy  \n");
-                      printf("-----------------------------------------------\n");
-                      for(i = 1;i <= frame->no_node_loads; i++) {
-                      nforces = &frame->nforces[i-1];
-                      printf("%5d ",(int) nforces->node_f); 
-                      printf(" %12.2f ",   nforces->fn[0].value);
-                      printf(" %12.2f ",   nforces->fn[1].value);
-                 }
-                 break;
-                 default:
-                 break;
+               }
+           }
+       }
+    }
+
+    /* [d] : Print nodal forces */
+
+    if(frame->no_node_loads >= 1 && (frame->no_dimen == 2)) {
+
+       printf("                        \n");
+       printf("EXTERNAL NODAL LOADINGS \n");
+
+       nforces = &frame->nforces[0];
+       if(frame->no_dof == 3) {
+          if(UNITS_SWITCH == ON ) {
+             for( i=1 ; i<=frame->no_dof ; i++ )
+                  UnitsSimplify( nforces->fn[i-1].dimen );
+
+             printf("================================================\n");
+             printf("Node#        Fx (%s)        Fy (%s)      Mz (%s)\n",
+                     nforces->fn[0].dimen->units_name,
+                     nforces->fn[1].dimen->units_name,
+                     nforces->fn[2].dimen->units_name);
+             printf("================================================\n");
+
+             for(i = 1;i <= frame->no_node_loads; i++) {
+                 nforces = &frame->nforces[i-1];
+                 for( j=1 ; j<=frame->no_dof ; j++ )
+                      UnitsSimplify( nforces->fn[j-1].dimen );
+                 printf("%5d ",(int) nforces->node_f); 
+                 printf(" %12.2f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
+                 printf(" %12.2f ",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
+                 printf(" %12.2f\n",   nforces->fn[2].value/nforces->fn[2].dimen->scale_factor);
+             }
+          } else {
+             printf("=================================== \n");
+             printf("Node#        Fx         Fy       Mz \n");
+             printf("=================================== \n");
+
+             for(i = 1;i <= frame->no_node_loads; i++) {
+                 nforces = &frame->nforces[i-1];
+                 printf("%5d ",(int) nforces->node_f); 
+                 printf(" %12.2f ",   nforces->fn[0].value);
+                 printf(" %12.2f ",   nforces->fn[1].value);
+                 printf(" %12.2f\n ",   nforces->fn[2].value);
              }
           }
-       }
+      }
 
-       if(frame->no_node_loads >= 1 && (frame->no_dimen == 3)) {
+      if(frame->no_dof == 2) {
+          if(UNITS_SWITCH == ON ) {
+             for( i=1 ; i<=frame->no_dof ; i++ )
+                 UnitsSimplify( nforces->fn[i-1].dimen );
 
-          printf("                        \n");
-          printf("EXTERNAL NODAL LOADINGS \n");
-          nforces = &frame->nforces[0];
-          if(frame->no_dof == 6){
-            printf("--------------------------------------------------------------------------------------------\n");
-            switch( UNITS_SWITCH ) {
-              case ON:
-                for( i=1 ; i<=frame->no_dof ; i++ )
-                     UnitsSimplify( nforces->fn[i-1].dimen );
-                printf("Node#       Fx (%s)      Fy (%s)     Fz (%s)     Mx (%s)    My (%s)     Mz (%s)\n",
-                        nforces->fn[0].dimen->units_name,
-                        nforces->fn[1].dimen->units_name,
-                        nforces->fn[2].dimen->units_name,
-                        nforces->fn[3].dimen->units_name,
-                        nforces->fn[4].dimen->units_name,
-                        nforces->fn[5].dimen->units_name);
-                printf("--------------------------------------------------------------------------------------------\n");
-                break;
-              case OFF:
-                printf("Node#       Fx       Fy      Fz      Mx     My      Mz \n");
-                break;
-              default:
-                break;
-            }
-          }
+             printf("=====================================\n");
+             printf("Node#        Fx (%s)        Fy (%s)\n",
+                     nforces->fn[0].dimen->units_name,
+                     nforces->fn[1].dimen->units_name);
+             printf("=====================================\n");
 
-          if(frame->no_dof == 5){
-            printf("-----------------------------------------------------------------------------------\n");
-            switch( UNITS_SWITCH ) {
-              case ON:
-                  for( i=1 ; i<=frame->no_dof ; i++ )
-                       UnitsSimplify( nforces->fn[i-1].dimen );
-                  printf("Node#       Fx (%s)     Fy (%s)    Fz (%s)    Mx (%s)   My (%s)\n",
-                          nforces->fn[0].dimen->units_name,
-                          nforces->fn[1].dimen->units_name,
-                          nforces->fn[2].dimen->units_name,
-                          nforces->fn[3].dimen->units_name,
-                          nforces->fn[4].dimen->units_name);
-                  printf("-----------------------------------------------------------------------------------\n");
-                 break;
-              case OFF:
-                  printf("Node#       Fx      Fy     Fz     Mx    My \n");
-                 break;
-              default:
-                 break;
-            }
-          }
+             for(i = 1;i <= frame->no_node_loads; i++) {
+                 nforces = &frame->nforces[i-1];
+                 for( j=1 ; j<=frame->no_dof ; j++ )
+                      UnitsSimplify( nforces->fn[j-1].dimen );
+                 printf("%5d ",(int) nforces->node_f);
+                 printf(" %12.2f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
+                 printf(" %12.2f\n",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
+             }
+          } else {
+             printf("=============================\n");
+             printf("Node#        Fx            Fy  \n");
+             printf("=============================\n");
+             for(i = 1;i <= frame->no_node_loads; i++) {
+                 nforces = &frame->nforces[i-1];
+                 printf("%5d ",(int) nforces->node_f); 
+                 printf(" %12.2f ",   nforces->fn[0].value);
+                 printf(" %12.2f\n",   nforces->fn[1].value);
+             }
+         }
+      }
+   }
 
-          switch( UNITS_SWITCH ) {
-            case ON:
-                for(i = 1;i <= frame->no_node_loads; i++) {
-                    nforces = &frame->nforces[i-1];
-                    for( j=1 ; j<=frame->no_dof ; j++ )
-                         UnitsSimplify( nforces->fn[j-1].dimen );
-                    printf("%5d ",(int) nforces->node_f); 
-                    printf("%12.3f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
-                    printf("%12.3f ",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
-                    printf("%12.3f ",   nforces->fn[2].value/nforces->fn[2].dimen->scale_factor);
-                    printf("%12.3f ",   nforces->fn[3].value/nforces->fn[3].dimen->scale_factor);
-                    printf("%12.3f ",   nforces->fn[4].value/nforces->fn[4].dimen->scale_factor);
-                    if(frame->no_dof == 6)
-                    printf("%12.3f",  nforces->fn[5].value/nforces->fn[5].dimen->scale_factor); 
-                    printf("\n"); 
-                }
-               break;
-            case OFF:
-                for(i = 1;i <= frame->no_node_loads; i++) {
-                    nforces = &frame->nforces[i-1];
-                    printf("%5d ",(int) nforces->node_f); 
-                    printf("%12.3f ",   nforces->fn[0].value);
-                    printf("%12.3f ",   nforces->fn[1].value);
-                    printf("%12.3f ",   nforces->fn[2].value);
-                    printf("%12.3f ",   nforces->fn[3].value);
-                    printf("%12.3f ",   nforces->fn[4].value);
-                    if(frame->no_dof == 6)
-                    printf("%12.3f",  nforces->fn[5].value);
-                    printf("\n"); 
-                }
-               break;
-            default:
-               break;
-          }
-       }
+   if(frame->no_node_loads >= 1 && (frame->no_dimen == 3)) {
 
-    /* [e] : Print Element Forces */
+      printf("                        \n");
+      printf("EXTERNAL NODAL LOADINGS \n");
 
-       if(frame->no_element_loads >= 1) {
-          printf("\n");
-          printf("------------------------------------------------\n");
-          printf("Element Loads : a,b = (in), Px,Py,Pz = (kips/in)\n");
-          printf("------------------------------------------------\n");
+      nforces = &frame->nforces[0];
+      if(frame->no_dof == 6) {
+         if( UNITS_SWITCH == ON ) {
+            for( i=1 ; i<=frame->no_dof ; i++ )
+                 UnitsSimplify( nforces->fn[i-1].dimen );
 
-          printf("\n");
-          printf("Elmt#\n");
-          printf("-----\n\n");
+            printf("============================================================================================\n");
+            printf("Node#       Fx (%s)      Fy (%s)     Fz (%s)     Mx (%s)    My (%s)     Mz (%s)\n",
+                   nforces->fn[0].dimen->units_name,
+                   nforces->fn[1].dimen->units_name,
+                   nforces->fn[2].dimen->units_name,
+                   nforces->fn[3].dimen->units_name,
+                   nforces->fn[4].dimen->units_name,
+                   nforces->fn[5].dimen->units_name);
+            printf("============================================================================================\n");
+         } else {
+            printf("========================================== \n");
+            printf("Node#       Fx      Fy     Fz     Mx    My \n");
+            printf("========================================== \n");
+         }
+      }
 
-          for(i=1; i <= frame->no_element_loads; i++) {
-              elsp = &frame->eforces[i-1];
-              elmt = &frame->element[elsp->elmt_no -1];
-              elp    = elsp->elib_ptr;
+      if(frame->no_dof == 5) {
+         if( UNITS_SWITCH == ON ) {
+            for( i=1 ; i<=frame->no_dof ; i++ )
+                 UnitsSimplify( nforces->fn[i-1].dimen );
 
-              if(iel_no == 1) {
-                 for(j=1;j<=elsp->no_loads_faces;j++) {
-                     printf("%5d %4d %5d %12.5f %12.5f %5d %13.5f %13.5f\n", elsp->elmt_no,
-                     elp->face_no,elp->nopl[1],elp->pr->uMatrix.daa[1][1],   
-                     elp->pr->uMatrix.daa[1][2],elp->nopl[2],elp->pr->uMatrix.daa[2][1],elp->pr->uMatrix.daa[2][2]);
-                 }
+            printf("===================================================================================\n");
+            printf("Node#       Fx (%s)     Fy (%s)    Fz (%s)    Mx (%s)   My (%s)\n",
+                    nforces->fn[0].dimen->units_name,
+                    nforces->fn[1].dimen->units_name,
+                    nforces->fn[2].dimen->units_name,
+                    nforces->fn[3].dimen->units_name,
+                    nforces->fn[4].dimen->units_name);
+            printf("===================================================================================\n");
+         } else {
+            printf("========================================== \n");
+            printf("Node#       Fx      Fy     Fz     Mx    My \n");
+            printf("========================================== \n");
+         }
+      }
+
+      if( UNITS_SWITCH == ON ) {
+         for(i = 1;i <= frame->no_node_loads; i++) {
+             nforces = &frame->nforces[i-1];
+
+             for( j=1 ; j<=frame->no_dof ; j++ )
+                  UnitsSimplify( nforces->fn[j-1].dimen );
+
+             printf("%5d ",(int) nforces->node_f); 
+             printf("%12.3f ",   nforces->fn[0].value/nforces->fn[0].dimen->scale_factor);
+             printf("%12.3f ",   nforces->fn[1].value/nforces->fn[1].dimen->scale_factor);
+             printf("%12.3f ",   nforces->fn[2].value/nforces->fn[2].dimen->scale_factor);
+             printf("%12.3f ",   nforces->fn[3].value/nforces->fn[3].dimen->scale_factor);
+             printf("%12.3f ",   nforces->fn[4].value/nforces->fn[4].dimen->scale_factor);
+             if(frame->no_dof == 6)
+                printf("%12.3f",  nforces->fn[5].value/nforces->fn[5].dimen->scale_factor); 
+             printf("\n"); 
+         }
+      }
+
+      if( UNITS_SWITCH == OFF ) {
+         for(i = 1;i <= frame->no_node_loads; i++) {
+             nforces = &frame->nforces[i-1];
+             printf("%5d ",(int) nforces->node_f); 
+             printf("%12.3f ",   nforces->fn[0].value);
+             printf("%12.3f ",   nforces->fn[1].value);
+             printf("%12.3f ",   nforces->fn[2].value);
+             printf("%12.3f ",   nforces->fn[3].value);
+             printf("%12.3f ",   nforces->fn[4].value);
+
+             if(frame->no_dof == 6)
+                printf("%12.3f",  nforces->fn[5].value);
+             printf("\n"); 
+         }
+      }
+   }
+
+   /* [e] : Print Element Forces */
+
+   if(frame->no_element_loads >= 1) {
+       printf("\n");
+       printf("================================================\n");
+       printf("Element Loads : a,b = (in), Px,Py,Pz = (kips/in)\n");
+       printf("================================================\n");
+
+       printf("\n");
+       printf("Elmt#\n");
+       printf("=====\n\n");
+
+       for(i=1; i <= frame->no_element_loads; i++) {
+           elsp = &frame->eforces[i-1];
+           elmt = &frame->element[elsp->elmt_no -1];
+           elp    = elsp->elib_ptr;
+
+           if(iel_no == 1) {
+              for(j=1;j<=elsp->no_loads_faces;j++) {
+                  printf("%5d %4d %5d %12.5f %12.5f %5d %13.5f %13.5f\n", elsp->elmt_no,
+                         elp->face_no,elp->nopl[1],elp->pr->uMatrix.daa[1][1],   
+                         elp->pr->uMatrix.daa[1][2],elp->nopl[2],
+                         elp->pr->uMatrix.daa[2][1],elp->pr->uMatrix.daa[2][2]);
               }
+           }
 
-              if(iel_no == 5) {
-                 if(elp->type == -1) { /* dist loading */
-                    printf("%5d :  a = %13.5f  b = %13.5f\n",elsp->elmt_no, elp->a.value, elp->b.value);
-                    printf("      : Px = %13.5f Py = %13.5f Pz = %13.5f\n", elp->bx.value,elp->by.value,elp->bz.value);
-                 }
-                 else { /* point load  & moments*/
-                    printf("%5d :  a = %13.5f  b = %13.5f\n",elsp->elmt_no, elp->a.value, elp->b.value);
-                    printf("      : Px = %13.5f Py = %13.5f Pz = %13.5f\n", elp->bx.value,elp->by.value,elp->bz.value);
-                    printf("      : Mx = %13.5f My = %13.5f Mz = %13.5f\n", elp->mx.value,elp->my.value,elp->mz.value);
-                 }
-              }
+           if(iel_no == 5) {
+           if(elp->type == -1) { /* dist loading */
+               printf("%5d :  a = %13.5f  b = %13.5f\n",
+                      elsp->elmt_no, elp->a.value, elp->b.value);
+               printf("      : Px = %13.5f Py = %13.5f Pz = %13.5f\n",
+                      elp->bx.value,elp->by.value,elp->bz.value);
+           } else { /* point load  & moments*/
+               printf("%5d :  a = %13.5f  b = %13.5f\n",elsp->elmt_no,
+                      elp->a.value, elp->b.value);
+               printf("      : Px = %13.5f Py = %13.5f Pz = %13.5f\n",
+                      elp->bx.value,elp->by.value,elp->bz.value);
+               printf("      : Mx = %13.5f My = %13.5f Mz = %13.5f\n",
+                      elp->mx.value,elp->my.value,elp->mz.value);
+           }
+           }
 
-              if(iel_no == 7 || iel_no == 2) {
-                 if(elp->type == -1) { /* distributed loading */
-                    printf("%5d : a = %13.5f b = %13.5f Py = %13.5f\n",elsp->elmt_no, elp->a.value, elp->b.value, elp->by.value);
-                 }
-                 else
-                    printf("%5d : a = %13.5f b = %13.5f P  = %13.5f\n",elsp->elmt_no, elp->a.value, elp->b.value, elp->P.value);
-              }
-          } 
-       }
+           if(iel_no == 7 || iel_no == 2) {
+           if(elp->type == -1) { /* distributed loading */
+              printf("%5d : a = %13.5f b = %13.5f Py = %13.5f\n",
+                      elsp->elmt_no, elp->a.value, elp->b.value, elp->by.value);
+           } else
+              printf("%5d : a = %13.5f b = %13.5f P  = %13.5f\n",
+                      elsp->elmt_no, elp->a.value, elp->b.value, elp->P.value);
+           }
+       } 
+    }
 
     /* [f] : End Message */
 
-       printf("\n");
-       printf("============= End of Finite Element Mesh Description ==============\n");
-       printf("\n\n");
+    printf("\n\n");
+    printf("============= End of Finite Element Mesh Description ==============\n");
+    printf("\n\n");
 }
 
 
-/*
- *  -----------------------------
- *  Print Displacements, Stresses 
- *  -----------------------------
- */
+/* 
+ *  =========================================================
+ *  Print_Stress() : Print Stresses.
+ *
+ *  Input  : Matrix * : Matrix of Stresses.....
+ *  Output : void
+ *  =========================================================
+ */ 
 
 #ifdef  __STDC__
 MATRIX *Print_Stress( MATRIX *m1, ... )
@@ -551,10 +541,6 @@ int            iInPlaneIntegPts;
 int          iThicknessIntegPts;
 int               iNO_INTEG_pts;
 
-#ifdef DEBUG
-       printf("*** Enter Print_Stress()\n");
-#endif
-
 #ifdef __STDC__
        va_start(arg_ptr, m1);
 #else
@@ -563,7 +549,6 @@ int               iNO_INTEG_pts;
 #endif
        va_end(arg_ptr);
 
-/*---------------------------------------*/
     UNITS_SWITCH = CheckUnits();
 
     /* [a] : Print Header */
@@ -572,157 +557,165 @@ int               iNO_INTEG_pts;
     printf("MEMBER FORCES \n");
     printf("------------------------------------------------------------------------------\n");
 
-    /* [b] :Calculate and Print Element Stresses */
+    /* [b] :Calculate and Print Element Stresses (linear and nonlinear cases) */
 
-    if(m1 != (MATRIX *) NULL) /* stress corresponding to linear response */
-       for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
+    /* Stresses corresponding to linear response */
 
-#ifdef DEBUG
-        printf(" elmt No = %d \n", elmt_no);
-#endif
-           array = Assign_p_Array(frame, elmt_no, array, STRESS);
-           array = elmlib(array, PROPTY);
+    if(m1 != (MATRIX *) NULL)
+    for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
 
-           /* Transfer Fixed Displacements */
+        array = Assign_p_Array(frame, elmt_no, array, STRESS);
+        array = elmlib(array, PROPTY);
 
-           ep           = &frame->element[elmt_no-1];
-           elmt_attr_no = ep->elmt_attr_no;  
-           eap          = &frame->eattr[elmt_attr_no-1];
-           for(i=1; i <= array->nodes_per_elmt; i++) {
-               k = 1; 
-               node_no = ep->node_connect[i-1];
-               for(j = 1; j <= array->dof_per_node; j++) {
-                   switch((int) array->nodes_per_elmt) {
-                     case 2:
-                     case 3:
-                        ii = eap->map_ldof_to_gdof[j-1];
-                        jj = frame->node[node_no - 1].bound_id[ii-1];
-                        if(jj > 0) {
-                           array->displ->uMatrix.daa[j-1][i-1] = m1->uMatrix.daa[jj-1][0];
-                           if( UNITS_SWITCH == ON ) {
+        /* Transfer Fixed Displacements */
+
+        ep           = &frame->element[elmt_no-1];
+        elmt_attr_no = ep->elmt_attr_no;  
+        eap          = &frame->eattr[elmt_attr_no-1];
+        for(i=1; i <= array->nodes_per_elmt; i++) {
+            k = 1; 
+            node_no = ep->node_connect[i-1];
+            for(j = 1; j <= array->dof_per_node; j++) {
+                switch((int) array->nodes_per_elmt) {
+                  case 2:
+                  case 3:
+                       ii = eap->map_ldof_to_gdof[j-1];
+                       jj = frame->node[node_no - 1].bound_id[ii-1];
+                       if(jj > 0) {
+                          array->displ->uMatrix.daa[j-1][i-1] = m1->uMatrix.daa[jj-1][0];
+                          if( UNITS_SWITCH == ON ) {
                               UnitsCopy(&(array->displ->spRowUnits[j-1]), &(m1->spRowUnits[jj-1]));
                               ZeroUnits(&(array->displ->spColUnits[i-1]));
                            }
-                        }
-                        else {
-                           array->displ->uMatrix.daa[j-1][i-1]
-                           = frame->node[node_no -1].disp[ii-1].value;
-                           if( UNITS_SWITCH == ON ) {
+                       } else {
+                          array->displ->uMatrix.daa[j-1][i-1]
+                          = frame->node[node_no -1].disp[ii-1].value;
+                          if( UNITS_SWITCH == ON ) {
                               UnitsCopy(&(array->displ->spRowUnits[j-1]),
-                                frame->node[node_no -1].disp[ii-1].dimen);
+                                        frame->node[node_no -1].disp[ii-1].dimen);
                               ZeroUnits(&(array->displ->spColUnits[i-1]));
-                           }
-                         }
-                         break;
-                    case 4:
-                    case 8:
-                        ii = eap->map_ldof_to_gdof[k-1];
-                        jj = frame->node[node_no - 1].bound_id[ii-1];
-                        if(jj > 0) {
-                           array->displ->uMatrix.daa[k-1][i-1] = m1->uMatrix.daa[jj-1][0];
-                           if( UNITS_SWITCH == ON ) {
+                          }
+                       }
+                       break;
+                  case 4:
+                  case 8:
+                       ii = eap->map_ldof_to_gdof[k-1];
+                       jj = frame->node[node_no - 1].bound_id[ii-1];
+                       if(jj > 0) {
+                          array->displ->uMatrix.daa[k-1][i-1] = m1->uMatrix.daa[jj-1][0];
+                          if( UNITS_SWITCH == ON ) {
                               UnitsCopy(&(array->displ->spRowUnits[k-1]), &(m1->spRowUnits[jj-1]));
                               ZeroUnits( &(array->displ->spColUnits[i-1]) );
-                           }
-                        }
-                        else {
-                           array->displ->uMatrix.daa[k-1][i-1]
-                           = frame->node[node_no -1].disp[ii-1].value;
-                           if( UNITS_SWITCH == ON ) {
+                          }
+                        } else {
+                          array->displ->uMatrix.daa[k-1][i-1]
+                          = frame->node[node_no -1].disp[ii-1].value;
+                          if( UNITS_SWITCH == ON ) {
                               UnitsCopy( &(array->displ->spRowUnits[k-1]),
-                                frame->node[node_no -1].disp[ii-1].dimen);
+                                         frame->node[node_no -1].disp[ii-1].dimen);
                               ZeroUnits( &(array->displ->spColUnits[i-1]) );
-                           }
+                          }
                         }
                         k = k + 1;
                         break;
-                      default:
+                  default:
                         break;
-                   }
                }
            }
-	   PRINT_STRESS = ON;
-           array = elmlib(array, STRESS);
-	   PRINT_STRESS = OFF;
+        }
 
-           for( i=1 ; i <= frame->no_dof ; i++ )
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1]
-                  = array->nodal_loads[frame->no_dof*(j-1)+i-1].value;
-           if( UNITS_SWITCH == ON ) {
-              for( i=1 ; i <= frame->no_dof ; i++ )
-                  UnitsCopy( &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]) , array->nodal_loads[i-1].dimen );
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  ZeroUnits( &(frame->element[elmt_no-1].rp->Forces->spColUnits[j-1]) );
-           }
-       }
-       
-      if(m1 == (MATRIX *) NULL) { /* stress response from response structure */
+        array = elmlib(array, STRESS);
 
+        for( i=1 ; i <= frame->no_dof ; i++ )
+        for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
+            frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1]
+            = array->nodal_loads[frame->no_dof*(j-1)+i-1].value;
 
-         slp = lookup("InPlaneIntegPts");  /* no of integration pts in plane/surface */
-         if(slp == NULL)
-            iInPlaneIntegPts = 2*2;        /* 2x2 as default */
-         else
-            iInPlaneIntegPts = (int) slp->u.q->value;
+        if( UNITS_SWITCH == ON ) {
+            for( i=1 ; i <= frame->no_dof ; i++ )
+                 UnitsCopy( &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]),
+                              array->nodal_loads[i-1].dimen );
+            for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
+                 ZeroUnits( &(frame->element[elmt_no-1].rp->Forces->spColUnits[j-1]) );
+        }
+    }
 
-         slp = lookup("ThicknessIntegPts"); /* no of integration pts in thickness direction */
-         if(slp == NULL)
-            iThicknessIntegPts = 2;        /* 2 as default */
-         else
-            iThicknessIntegPts = (int) slp->u.q->value;
+    /* 
+     *  ====================================================================
+     *  Print stresses corresponding to "nonlinear" response of structure
+     *  These stresses are stored internally in Aladdin database       
+     *                                                                 
+     *  Aladdin command is : PrintStress() with no matrix argument.
+     *                                                                 
+     *  Note : Code in this section still needs to be checked          
+     *  ====================================================================
+     */ 
+
+    if(m1 == (MATRIX *) NULL) {
+
+       slp = lookup("InPlaneIntegPts");  /* no of integration pts in plane/surface */
+       if(slp == NULL)
+          iInPlaneIntegPts = 2*2;        /* 2x2 as default */
+       else
+          iInPlaneIntegPts = (int) slp->u.q->value;
+
+       slp = lookup("ThicknessIntegPts"); /* no of integration pts in thickness direction */
+       if(slp == NULL)
+          iThicknessIntegPts = 2;        /* 2 as default */
+       else
+          iThicknessIntegPts = (int) slp->u.q->value;
   
-         iNO_INTEG_pts = iInPlaneIntegPts*iThicknessIntegPts;
+       iNO_INTEG_pts = iInPlaneIntegPts*iThicknessIntegPts;
 
-         lint = (int) 0;
-         l = (int) iInPlaneIntegPts;
-         for(i = 1; i<= l*l; i++) {
-             xi[i-1]  = 0.0;
-             eta[i-1] = 0.0;
-             wg[i-1]  = 0.0;
-         }
+       lint = (int) 0;
+       l = (int) iInPlaneIntegPts;
+       for(i = 1; i<= l*l; i++) {
+           xi[i-1]  = 0.0;
+           eta[i-1] = 0.0;
+           wg[i-1]  = 0.0;
+       }
 
-         if(l*l != lint)
-            pgauss(l,&lint,xi,eta,wg);
+       if(l*l != lint)
+          pgauss(l,&lint,xi,eta,wg);
 
-         gamma = dVectorAlloc(iThicknessIntegPts+1);
-         wt    = dVectorAlloc(iThicknessIntegPts+1);
-         gauss(gamma,wt,iThicknessIntegPts);
+       gamma = dVectorAlloc(iThicknessIntegPts+1);
+       wt    = dVectorAlloc(iThicknessIntegPts+1);
+       gauss(gamma,wt,iThicknessIntegPts);
 
-         for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
-             ep           = &frame->element[elmt_no-1];
-             elmt_attr_no = ep->elmt_attr_no;
-             eap          = &frame->eattr[elmt_attr_no-1];
-             if(elmt_no == 1) 
-                printf(" Element : %s \n Material : %s \n\n", eap->elmt_type, eap->material);
+       for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
+           ep           = &frame->element[elmt_no-1];
+           elmt_attr_no = ep->elmt_attr_no;
+           eap          = &frame->eattr[elmt_attr_no-1];
+           if(elmt_no == 1) 
+              printf(" Element : %s \n Material : %s \n\n", eap->elmt_type, eap->material);
 
-             printf("\n STRESS in  Element No  %d \n",elmt_no);
-             printf(" =============================================================================================================== \n");
-             printf(" Gaussion    xi       eta        gamma    Stre-xx         Stre-yy         Stre-xy         Stre-yz        Stre-zx \n");
-             if(UNITS_SWITCH == OFF)
-                printf("  Points \n");
-             if(UNITS_SWITCH == ON)   {
-                printf("  Points                                    %s             %s             %s              %s             %s \n",
+           printf("\n STRESS in  Element No  %d \n",elmt_no);
+           printf(" =============================================================================================================== \n");
+           printf(" Gaussion    xi       eta        gamma    Stre-xx         Stre-yy         Stre-xy         Stre-yz        Stre-zx \n");
+           if(UNITS_SWITCH == OFF)
+              printf("  Points \n");
+           if(UNITS_SWITCH == ON)   {
+              printf("  Points                                    %s             %s             %s              %s             %s \n",
                           ep->rp->stress->spRowUnits[0].units_name,
                           ep->rp->stress->spRowUnits[1].units_name,
                           ep->rp->stress->spRowUnits[2].units_name,
                           ep->rp->stress->spRowUnits[3].units_name,
                           ep->rp->stress->spRowUnits[4].units_name);
-             printf(" ---------------------------------------------------------------------------------------------------------------\n \n");
+              printf(" ---------------------------------------------------------------------------------------------------------------\n \n");
 
-                for(i = 1; i <= iThicknessIntegPts; i++)
-                    for(j = 1; j <= lint; j++) {
-                        k = lint*(i-1)+j;
-                        printf("   %d  %10.4f %10.4f %10.4f", k, xi[j-1], eta[j-1], gamma[i]);
-                        printf("\t%11.4e\t%11.4e\t%11.4e\t%11.4e\t%11.4e\n", 
+              for(i = 1; i <= iThicknessIntegPts; i++)
+              for(j = 1; j <= lint; j++) {
+                  k = lint*(i-1)+j;
+                  printf("   %d  %10.4f %10.4f %10.4f", k, xi[j-1], eta[j-1], gamma[i]);
+                  printf("\t%11.4e\t%11.4e\t%11.4e\t%11.4e\t%11.4e\n", 
                              ep->rp->stress->uMatrix.daa[0][k-1]/ep->rp->stress->spRowUnits[0].scale_factor,
                              ep->rp->stress->uMatrix.daa[1][k-1]/ep->rp->stress->spRowUnits[1].scale_factor,
                              ep->rp->stress->uMatrix.daa[2][k-1]/ep->rp->stress->spRowUnits[2].scale_factor,
                              ep->rp->stress->uMatrix.daa[3][k-1]/ep->rp->stress->spRowUnits[3].scale_factor,
                              ep->rp->stress->uMatrix.daa[4][k-1]/ep->rp->stress->spRowUnits[4].scale_factor);
-                    }
-             }
-             if(UNITS_SWITCH == OFF)
+              }
+              }
+              if(UNITS_SWITCH == OFF)
                 for(i = 1; i <= iThicknessIntegPts; i++)
                     for(j = 1; j <= lint; j++) {
                         k = lint*(i-1)+j;
@@ -733,15 +726,19 @@ int               iNO_INTEG_pts;
                              ep->rp->stress->uMatrix.daa[2][k-1],
                              ep->rp->stress->uMatrix.daa[3][k-1],
                              ep->rp->stress->uMatrix.daa[4][k-1]);
-                    }
-         }
-      }
-
-#ifdef DEBUG
-       printf("*** Leave Print_Stress()\n");
-#endif
-
+                }
+        }
+    }
 }
+
+/* 
+ *  =========================================================
+ *  Print_Displ() : Print Displacements
+ *
+ *  Input  : Matrix * : Matrix of Displacements to be printed
+ *  Output : void
+ *  =========================================================
+ */ 
 
 #ifdef __STDC__
 void Print_Displ(MATRIX *m1)
@@ -754,44 +751,42 @@ int node_no, j, k, ii, jj;
 int          UNITS_SWITCH;
 double                 da;
 
-#ifdef DEBUG
-       printf("\n*** Enter Print_Displ()\n");
-#endif
-
     UNITS_SWITCH = CheckUnits();
 
     if(frame->no_dof == 6) {
-       printf("\n------------------------------------------------------------------------------------------------------------------\n");
-       printf(" Node                                             Displacement\n");
-       printf("  No             displ-x           displ-y           displ-z             rot-x             rot-y             rot-z\n");
-       printf("------------------------------------------------------------------------------------------------------------------\n");
+    printf("\n");
+    printf("==================================================================================================================\n");
+    printf(" Node                                             Displacement\n");
+    printf("   No            displ-x           displ-y           displ-z             rot-x             rot-y             rot-z\n");
+    printf("==================================================================================================================\n");
 
-       if( UNITS_SWITCH == ON ) {
-          printf(" units");
-          for( ii=1 ; ii<=6 ; ii++ ) {
-             if( ii <= 3 ) {
-                if( (UNITS_TYPE==SI) || (UNITS_TYPE==SI_US) )
+    if( UNITS_SWITCH == ON ) {
+        printf(" units");
+        for( ii=1 ; ii<=6 ; ii++ ) {
+           if( ii <= 3 ) {
+               if((CheckUnitsType()==SI) || (CheckUnitsType()==SI_US) )
                    printf("                m ");
-                else 
+               else 
                    printf("               in ");
-             }
-             else
+           } else
                    printf("              rad ");
-          }
-       }
-       printf("\n");
+        }
+    }
+    printf("\n");
     }
 
     if(frame->no_dof == 5) {
-       printf("\n------------------------------------------------------------------------------------------------\n");
-       printf(" Node                                   Displacement\n");
-       printf("  No             displ-x           displ-y           displ-z             rot-x             rot-y\n");
-       printf("------------------------------------------------------------------------------------------------\n");
-       if( UNITS_SWITCH == ON ) {
+    printf("\n");
+    printf("================================================================================================\n");
+    printf(" Node                                   Displacement\n");
+    printf("   No            displ-x           displ-y           displ-z             rot-x             rot-y\n");
+    printf("================================================================================================\n");
+
+    if( UNITS_SWITCH == ON ) {
           printf(" units");
           for( ii=1 ; ii<=5 ; ii++ ) {
              if( ii <= 3 ) {
-                if( (UNITS_TYPE==SI) || (UNITS_TYPE==SI_US) )
+                if( (CheckUnitsType()==SI) || (CheckUnitsType()==SI_US) )
                    printf("                m ");
                 else 
                    printf("               in ");
@@ -799,21 +794,22 @@ double                 da;
              else
                    printf("              rad ");
           }
-       }
-       printf("\n");
+    }
+    printf("\n");
     }
 
     if(frame->no_dof == 3) {
-       printf("\n------------------------------------------------------------\n");
-       printf(" Node                           Displacement\n");
-       printf("  No             displ-x           displ-y             rot-z\n");
-       printf("------------------------------------------------------------\n");
+    printf("\n");
+    printf("============================================================\n");
+    printf(" Node                           Displacement                \n");
+    printf("   No            displ-x           displ-y             rot-z\n");
+    printf("============================================================\n");
 
-       if( UNITS_SWITCH == ON ) {
-          printf(" units");
-          for( ii=1 ; ii<=3 ; ii++ ) {
+    if( UNITS_SWITCH == ON ) {
+        printf(" units");
+        for( ii=1 ; ii<=3 ; ii++ ) {
              if( ii <= 2 ) {
-                if( (UNITS_TYPE==SI) || (UNITS_TYPE==SI_US) )
+                if( (CheckUnitsType()==SI) || (CheckUnitsType()==SI_US) )
                    printf("                m ");
                 else 
                    printf("               in ");
@@ -821,97 +817,99 @@ double                 da;
              else
                    printf("              rad ");
           }
-       }
-       printf("\n");
+    }
+    printf("\n");
     }
 
     if(frame->no_dof == 2) {
+    printf("\n");
+    printf("==========================================\n");
+    printf(" Node                  Displacement       \n");
+    printf("   No            displ-x           displ-y\n");
+    printf("==========================================\n");
 
-       printf("\n------------------------------------------\n");
-       printf(" Node                  Displacement\n");
-       printf("  No             displ-x           displ-y\n");
-       printf("------------------------------------------\n");
-       if( UNITS_SWITCH == ON ) {
-          printf(" units");
-          for( ii=1 ; ii<=2 ; ii++ ) {
-                if( (UNITS_TYPE==SI) || (UNITS_TYPE==SI_US) )
-                   printf("                m ");
-                else 
-                   printf("               in ");
-          }
-       }
-       printf("\n");
+    if( UNITS_SWITCH == ON ) {
+        printf(" units");
+        for( ii=1; ii <= 2; ii++ ) {
+             if( (CheckUnitsType()==SI) || (CheckUnitsType()==SI_US) )
+                 printf("                m ");
+             else 
+                 printf("               in ");
+        }
     }
+    printf("\n");
+    } 
 
  /*
-  *  ===================
-  *  Print displacements 
-  *  ===================
+  *  ==================================================
+  *  Print displacements for UNITS_SWITCH == ON and OFF
+  *  ==================================================
   */
-   
-  switch( UNITS_SWITCH ) {
-      case ON:
-           for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
-           printf("%4d  ", node_no);
-           for(j  = 1; j <= frame->no_dof; j++){
-               jj = frame->node[node_no - 1].bound_id[j-1];
-               if(jj > 0) {
-                  if(m1->spRowUnits[jj-1].units_name != NULL ) {
-                      UnitsTypeConvert(&(m1->spRowUnits[jj-1]), UNITS_TYPE);
-                  }
-                  RadUnitsSimplify( &(m1->spRowUnits[jj-1]) );
-                  frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
-                  UnitsCopy( frame->node[node_no-1].disp[j-1].dimen, &(m1->spRowUnits[jj-1]) );
-                  da =  MatrixContentScaleIndirectDouble(m1,jj, 1);
-                  printf("     %13.5e", da);
-               } else {
-                  switch(UNITS_TYPE) {
-                    case SI:
+
+  if( UNITS_SWITCH == ON ) {
+
+      for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
+
+      printf("%4d  ", node_no);
+      for(j  = 1; j <= frame->no_dof; j++){
+
+          jj = frame->node[node_no - 1].bound_id[j-1];
+          if(jj > 0) {
+             if(m1->spRowUnits[jj-1].units_name != NULL ) {
+                UnitsTypeConvert(&(m1->spRowUnits[jj-1]), CheckUnitsType());
+             }
+             RadUnitsSimplify( &(m1->spRowUnits[jj-1]) );
+             frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
+             UnitsCopy( frame->node[node_no-1].disp[j-1].dimen, &(m1->spRowUnits[jj-1]) );
+             da =  MatrixContentScaleIndirectDouble(m1,jj, 1);
+             printf("     %13.5e", da);
+          } else {
+
+             switch(CheckUnitsType()) {
+                case SI:
                      if( (frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
                         !strcmp( frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_F"))
 
-                        frame->node[node_no -1].disp[j-1].value
-                        = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
-                         frame->node[node_no -1].disp[j-1].value, US);
-                         break;
-                    case US:
-                         if((frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
-                             !strcmp(frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_C"))
+                     frame->node[node_no -1].disp[j-1].value
+                     = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
+                                        frame->node[node_no -1].disp[j-1].value, US);
+                     break;
+                case US:
+                     if((frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
+                         !strcmp(frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_C"))
 
-                             frame->node[node_no -1].disp[j-1].value
-                             = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
-                                                frame->node[node_no -1].disp[j-1].value, SI);
-                          break;
-                  }
-                  RadUnitsSimplify( frame->node[node_no-1].disp[j-1].dimen );
-                  printf("     %13.5e", frame->node[node_no -1].disp[j-1].value/
-                        frame->node[node_no-1].disp[j-1].dimen->scale_factor);
-                }
-           }
-           printf("\n");
-         }
-         break;
-      case OFF:
-         for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
-             printf("%4d  ", node_no);
-             for(j  = 1; j <= frame->no_dof; j++){
-                jj = frame->node[node_no - 1].bound_id[j-1];
-                if(jj > 0) {
-                   frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
-                   printf("     %13.5e", m1->uMatrix.daa[jj-1][0]);
-                }
-                else
-                   printf("     %13.5e", frame->node[node_no -1].disp[j-1].value);
+                         frame->node[node_no -1].disp[j-1].value
+                         = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
+                                            frame->node[node_no -1].disp[j-1].value, SI);
+                     break;
              }
-             printf("\n");
-         }
-         break;
-      default:
-         break;
-    }
 
-#ifdef DEBUG
-       printf("*** Leave Print_Displ()\n\n");
-#endif
+             RadUnitsSimplify( frame->node[node_no-1].disp[j-1].dimen );
+             printf("     %13.5e", frame->node[node_no -1].disp[j-1].value/
+                          frame->node[node_no-1].disp[j-1].dimen->scale_factor);
+         }
+      }
+      printf("\n");
+      }
+  }
+
+  /* Print displacements when units are OFF */
+
+  if( UNITS_SWITCH == OFF ) {
+   
+      for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
+          printf("%4d  ", node_no);
+          for(j  = 1; j <= frame->no_dof; j++){
+              jj = frame->node[node_no - 1].bound_id[j-1];
+              if(jj > 0) {
+                 frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
+                 printf("     %13.5e", m1->uMatrix.daa[jj-1][0]);
+              }
+              else
+                 printf("     %13.5e", frame->node[node_no -1].disp[j-1].value);
+          }
+          printf("\n");
+      }
+  }
 
 }

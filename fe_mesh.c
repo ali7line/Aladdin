@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *            fe_mesh.c : Generate Finite Element Mesh
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  fe_mesh.c : Generate Finite Element Mesh
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, and Wane-Jang Lin                      December 1995
+ *  Written by: Mark Austin and Wane-Jang Lin                            May 1997
  *  ============================================================================= 
  */
 
@@ -31,23 +32,20 @@
 #include <varargs.h>
 #endif
 
-#include "units.h"
 #include "defs.h"
+#include "miscellaneous.h"
+#include "units.h"
 #include "matrix.h"
-#include "vector.h"
 #include "fe_database.h"
 #include "symbol.h"
+#include "vector.h"
 #include "fe_functions.h"
-#include "miscellaneous.h"
 #include "elmt.h"
 
 /* External Declarations for global frame/working element data structures */
 
 extern ARRAY     *array;
 extern EFRAME    *frame;
-
-static QUANTITY  *Fn;
-QUANTITY         *ddnode;
 
 int    TDOF;
 int    TNEQ;
@@ -510,6 +508,9 @@ int UNITS_SWITCH;
  */
 
 void Start_Mesh() {
+
+void Load_AISC_Sections();
+void Load_AISC_Material();
 
    /* [a] : Load materials and AISC sections into Symbol Table */
 

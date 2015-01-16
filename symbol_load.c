@@ -25,12 +25,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "defs.h"
-#include "miscellaneous.h"
 
 /*
  *  ------------------------------------
@@ -38,7 +38,7 @@
  *  ------------------------------------
  */
 
-int Load_AISC_Sections()
+void Load_AISC_Sections()
 { 
 char *name;
 FILE   *fp;
@@ -130,7 +130,7 @@ DIMENSIONS  *dp_weight, *dp_length, *dimen1, *dimen2;
  *  --------------------------------
  */
  
-int Load_AISC_Material()
+void Load_AISC_Material()
 {
 FILE      *fp;
 char    *name;

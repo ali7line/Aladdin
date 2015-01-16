@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *            grammar.y : YACC grammar
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  grammar.y : YACC grammar
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,18 +20,18 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
 %{
 #include  <stdio.h>
+#include  "defs.h"
 #include  "units.h"
 #include  "matrix.h"
 #include  "fe_database.h"
 #include  "symbol.h"
 #include  "code.h"
-#include  "defs.h"
 	
 #define	  Code2(c1,c2)     Code(c1); Code(c2)
 #define   Code3(c1,c2,c3)  Code(c1); Code(c2); Code(c3)
@@ -60,7 +61,7 @@
 %token  <sym>  	SECT_ATTR	ELMT_ATTR	MATL_ATTR	FIB_ATTR
 %token  <sym>   UNIT
 %token  <sym>	MAP  	LDOF 	TO 	GDOF
-%token  <sym>	PRINT_DISPL	UPDATERESPONSE
+%token  <sym>	BLTIN_FE_FUNC	BLTIN1_FE_FUNC
 
 %token  <sym>  	VAR		QUAN 	VECT	 	MATX
 
@@ -84,6 +85,7 @@
 %left    GT GE LT LE EQ NE
 %left    '+'   '-'	
 %left    '*'  '/'  
+%left    '%'
 %left    UNARYPLUS UNARYMINUS NOT
 %right	'^'	
 %%
@@ -187,11 +189,11 @@ finite_elmt : NODE_QUANT '(' quantity ',' matrix ')' {
             | MESH '(' ')' {
                     Code2( Bltin_Mesh, (Inst) $1->u.voidptr);
                     }
-            | PRINT_DISPL  '(' matrix ')' {
-                    Code2( Bltin_Print_Displ, (Inst) $1->u.voidptr);
+            | BLTIN_FE_FUNC '(' ')' {
+                    Code2( Bltin_Fe_Function, (Inst) $1->u.voidptr);
                     }
-            | UPDATERESPONSE '(' ')' {
-                    Code2( Bltin_Update_Resp, (Inst) $1->u.voidptr);
+            | BLTIN1_FE_FUNC  '(' matrix ')' {
+                    Code2( Bltin1_Fe_Function, (Inst) $1->u.voidptr);
                     }
             ;
 
@@ -212,11 +214,17 @@ object : MATL_ATTR '(' STRING ')' '{' object_seq '}' {
                     Code3( Push_String,   (Inst) $3, String_Eval);
                     Code( Bltin_Element_Attr);
 		    }
+       | FIB_ATTR '(' VAR ',' STRING ')' '{' object_seq '}' {
+                    Code2( Push_Variable, (Inst) $8);
+                    Code3( Push_String,   (Inst) $5, String_Eval);
+                    Code3( Push_Variable, (Inst)$3, Variable_Eval);
+                    Code(  Bltin_Fiber_Attr );
+		    }
        | FIB_ATTR '(' NUMBER ',' STRING ')' '{' object_seq '}' {
                     Code2( Push_Variable, (Inst) $8);
                     Code3( Push_String,   (Inst) $5, String_Eval);
-		    Code(  Push_Dimensionless );
-		    Code3( Push_Constant, (Inst) $3, Dimension_Eval );
+                    Code( Push_Dimensionless );
+                    Code3( Push_Constant, (Inst)$3, Dimension_Eval);
                     Code(  Bltin_Fiber_Attr );
 		    }
        | UNIT '(' STRING ')' ';'  {
@@ -323,6 +331,8 @@ quantity:  NUMBER                           { $$ = Code(Push_Dimensionless);
                                               Code3(Push_Constant, (Inst)$1, Dimension_Eval); }
         |  NUMBER dimensions                { Code3(Push_Constant, (Inst)$1, Dimension_Eval); $$ = $2;}
         |  VAR                              { $$ =  Code3(Push_Variable, (Inst)$1,  Variable_Eval); }
+        |  VAR dimensions                   { Code3(Push_Variable, (Inst)$1, Variable_Eval);
+                                              Code(Dimension_Eval); $$ = $2; }
         |  BLTIN_QUANTITY '(' ')'           { Code2( Bltin_Quantity, (Inst)$1->u.quantityptr); }
         |  BLTIN1_QUANTITY '(' quantity ')' { Code2( Bltin1_Quantity, (Inst)$1->u.quantityptr); }
         |  BLTIN2_QUANTITY '(' quantity ','
@@ -342,6 +352,7 @@ quantity:  NUMBER                           { $$ = Code(Push_Dimensionless);
         |  quantity '*' quantity            { Code(Quantity_Mul); }
         |  quantity '/' quantity            { Code(Quantity_Div); }
         |  quantity '^' quantity            { Code(Quantity_Power); }
+        |  quantity '%' quantity            { Code(Quantity_Mod); }
         ;
 
 conditional_quantity:  quantity GT  quantity  { Code(Quantity_Gt);   }
@@ -368,7 +379,6 @@ m_to_quantity : MATX '[' quantity ']' '[' quantity ']' {
               ;
 
 dimensions: DIMENSION                 { $$ = Code2( Push_Dimension, (Inst)$1); }
-	  |  '(' dimensions ')'       {  $$ = $2; }
 	  | dimensions '*' dimensions {  Code( Dimension_Mult ); }
 	  | dimensions '/' dimensions {  Code( Dimension_Div); }
 	  | dimensions '^' quantity   {  $$ = $1; Code( Dimension_Power); }
@@ -562,7 +572,7 @@ char *s;
 int backslash(c)
 int c;
 {
-char *index();
+char *strchr();
 static char transtab[] = "b\bf\fn\nr\rt\t";
 
     if(c != '\\')
@@ -572,8 +582,8 @@ static char transtab[] = "b\bf\fn\nr\rt\t";
 
     if(fin == stdin && finp != stdin) fputc(c, finp);
 
-    if(islower(c) && index(transtab, c))
-       return index(transtab, c)[1];
+    if(islower(c) && strchr(transtab, c))
+       return strchr(transtab, c)[1];
 
     return c;
 }

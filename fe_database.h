@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *        fe_database.h : Database for Finite Element Machine
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  fe_database.h : Database for Finite Element Machine
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -40,7 +41,7 @@ typedef struct element_response {
      MATRIX     *Q_saved,  *q_saved;
      MATRIX  	*sr_saved, *er_saved;    /* matrix[no_integ_pt][ifib] */
      MATRIX     *s0_saved, *e0_saved;
-     MATRIX  	*sx_saved, *ex_saved;
+     MATRIX     *sx_saved, *ex_saved;
 } RESPONSE;
 
 typedef struct mater_load_curve {
@@ -130,12 +131,14 @@ typedef struct fiber_attr {
 	QUANTITY	y, z;
 	QUANTITY	area;
 	QUANTITY	Es, Et, fy;
+	QUANTITY	Gs, Gt, fv;
 } FIBER_ATTR;
 
 typedef struct fiber_elmt {
 	int		no_fiber;
+	int		no_shear; /* No of uniaxial shear spring in each direction */
 	FIBER_ATTR      *fiber;   /* Array of fibers for all fiber properties */
-}FIBER_ELMT;
+} FIBER_ELMT;
 
 typedef struct elmt_attr {
         char                    *name;
@@ -173,6 +176,7 @@ typedef struct section_attr {
         QUANTITY      rT;            /* [13] Section radius of gyration */
         QUANTITY      width;         /* [14] Section width           */
         QUANTITY      tw;            /* [15] Thickness of web        */
+	double        ks;            /* [16] Shear correction factor */
       } SECTION_ATTR;
 
  typedef struct materials {
@@ -186,8 +190,7 @@ typedef struct section_attr {
         QUANTITY                  fu;    /* [6] Ultimate stress                  */
         QUANTITY      *alpha_thermal;    /* [7,8,9] thermal expansion coeff(0,1,2) */
 	QUANTITY                  Gt;    /* [10] Tangent shear modulus           */
-	double                    ks;    /* [11] Shear correction factor         */
-	QUANTITY                  fv;    /* [12] Yielding stress for shear       */
+	QUANTITY                  fv;    /* [11] Yielding stress for shear       */
 	MATER_LOAD_CURVE     *LC_ptr;    /* parameters for decribing yield   */
                                          /* surface and stress strain curve  */
       } MATERIAL_ATTR;
@@ -233,6 +236,32 @@ typedef struct element_loads {
 } ELEMENT_LOADS;
 
 
+/* ------------------------------------------------ */
+/* Data structure for fiber element loading history */
+/* ------------------------------------------------ */
+typedef struct section_j_1
+{
+   double   xi;
+   double   wi;
+   MATRIX  *fx;
+   MATRIX  *Dx;
+   MATRIX  *rx;
+}SECTION_DATA;
+
+typedef struct load_history
+{
+   int     elmt_no;
+   MATRIX  *stress, *strain, *tangent;
+   MATRIX  *sr, *er, *s0, *e0;
+   int     **yielding, **pre_load, **pre_range, **loading;
+}HISTORY_DATA;
+
+typedef struct fiber_respond
+{
+   int   total_fiber_elmt;
+   HISTORY_DATA  *history;
+}FIBER_RESPONSE;
+
 /* ------------------------ */
 /* Data structure for frame */
 /* ------------------------ */
@@ -257,6 +286,7 @@ typedef struct frame {
         int                  *jdiag;
         int                   no_eq;
         int                     nre; /* flag for presence of nodal load delet later */
+	int             no_integ_pt; /* Gauss_Lobatto integration point */
 } EFRAME;
 
 
@@ -316,10 +346,10 @@ typedef struct array {
         QUANTITY                length;
         ELEMENT_LOADS   *elmt_load_ptr;
         INTEG_PTS           *integ_ptr;
-	FIBER_ELMT          *fiber_ptr;
-        MATRIX             *Q_saved,  *q_saved;
-        MATRIX     *sr_saved, *er_saved, *s0_saved, *e0_saved, *sx_saved, *ex_saved;
-	int	**yielding_saved, **pre_range_saved, **pre_load_saved;
+	FIBER_ELMT          *fiber_ptr;  /* NOTE:  use the same address in frame */
+        MATRIX     *Q_saved,  *q_saved;
+        MATRIX    *sr_saved, *er_saved, *s0_saved, *e0_saved, *sx_saved, *ex_saved;
+	int           **yielding_saved, **pre_range_saved, **pre_load_saved;
 } ARRAY;
 
 #endif /* end case FE_DATABASE_H */

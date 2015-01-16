@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *       elmt_library.c : Utility Functions for Element Library
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  elmt_library.c : Utility Functions for Element Library
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -28,13 +29,12 @@
 #include <stdlib.h>
 
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "fe_functions.h"
 #include "elmt.h"
-#include "miscellaneous.h"
 
 #define Streq(s1, s2) (strcmp(s1, s2) == 0)
 
@@ -52,41 +52,37 @@ int     isw;
 int i,l,m,k;
 static int FLAG;
 
-    /* Check for element no errors */
-
-#ifdef DEBUG
-       printf(" enter elmlib() \n");
-       printf(" elmt_type = %s \n", p->elmt_type);
-       printf(" elmt_no   = %d \n", p->elmt_no);
-#endif
-
     /* For selected element tasks, zero stiffness matrix */
-    /* PROPTY=1, CHERROR=2, STIFF=3, STRESS=4, MASS_MATRIX=5, LOAD_MATRIX=6   */
-    /* PRESSLD=7, STRESS_LOAD=8, EQUIV_NODAL_LOAD=9  */
 
-    if(isw >= 3 && isw <= 6) {
-       k = p->size_of_stiff;
-
-       if(isw >= STIFF) { 
-          for(i=1; i <= k; i++) {
-              for(m=1; m <= k; m++)
-                  p->stiff->uMatrix.daa[i-1][m-1] = 0.0;
-          }
-          if( CheckUnits()==ON ) {
-              for(i = 1; i <= k; i++) {
-                  ZeroUnits( &(p->stiff->spRowUnits[i-1]) );
-                  ZeroUnits( &(p->stiff->spColUnits[i-1]) );
-                  p->stiff->spRowUnits[i-1].units_type = SI_US;
-                  p->stiff->spColUnits[i-1].units_type = SI_US;
-              }
-          }
-       }
+    switch ( isw ) {
+        case STIFF:
+        case STRESS:
+        case MASS_MATRIX:
+        case LOAD_MATRIX:
+             k = p->size_of_stiff;
+             if(isw >= STIFF) { 
+                for(i=1; i <= k; i++) {
+                    for(m=1; m <= k; m++)
+                        p->stiff->uMatrix.daa[i-1][m-1] = 0.0;
+                }
+                if( CheckUnits()==ON ) {
+                    for(i = 1; i <= k; i++) {
+                        ZeroUnits( &(p->stiff->spRowUnits[i-1]) );
+                        ZeroUnits( &(p->stiff->spColUnits[i-1]) );
+                        p->stiff->spRowUnits[i-1].units_type = SI_US;
+                        p->stiff->spColUnits[i-1].units_type = SI_US;
+                    }
+                }
+             }
+             break;
+        default:
+             break;
     }
 
     /* Switch to element tasks() */
 
     FLAG = FALSE;
-    for(i = 0; i <= NO_ELEMENTS_IN_LIBRARY; i++){ 
+    for(i = 0; i < NO_ELEMENTS_IN_LIBRARY; i++){ 
        if(elmt_library[i].name != NULL && Streq(p->elmt_type, elmt_library[i].name)) {
           p =  (*(ARRAY * (*) ()) (elmt_library[i].elmt_lib_func))(p, isw);
           FLAG = TRUE;
@@ -134,6 +130,7 @@ SYMBOL             *slp;
 int    iInPlaneIntegPts;
 int  iThicknessIntegPts;
 int       iNO_INTEG_pts;
+int         total_fiber;
 
 #ifdef DEBUG
        printf(" enter assign_properties\n");
@@ -197,8 +194,7 @@ int       iNO_INTEG_pts;
          frame->eattr[n-1].work_material[8].value  = map->alpha_thermal[1].value;
          frame->eattr[n-1].work_material[9].value  = map->alpha_thermal[2].value;
          frame->eattr[n-1].work_material[10].value  = map->Gt.value;
-         frame->eattr[n-1].work_material[11].value  = map->ks;
-         frame->eattr[n-1].work_material[12].value  = map->fv.value;
+         frame->eattr[n-1].work_material[11].value  = map->fv.value;
 
     switch(UNITS_SWITCH) {
       case ON:
@@ -223,9 +219,8 @@ int       iNO_INTEG_pts;
            UnitsCopy( frame->eattr[n-1].work_material[9].dimen, map->alpha_thermal[2].dimen );
         if(map->Gt.dimen != NULL)
            UnitsCopy( frame->eattr[n-1].work_material[10].dimen, map->Gt.dimen );
-        ZeroUnits( frame->eattr[n-1].work_material[11].dimen );
         if(map->fv.dimen != NULL)
-           UnitsCopy( frame->eattr[n-1].work_material[12].dimen, map->fv.dimen );
+           UnitsCopy( frame->eattr[n-1].work_material[11].dimen, map->fv.dimen );
 
       break;
       case OFF:
@@ -257,6 +252,7 @@ int       iNO_INTEG_pts;
          frame->eattr[n-1].work_section[13].value  = sap->rT.value;
          frame->eattr[n-1].work_section[14].value  = sap->width.value;
          frame->eattr[n-1].work_section[15].value  = sap->tw.value;
+         frame->eattr[n-1].work_section[16].value  = sap->ks;
 
     switch(UNITS_SWITCH) {
       case ON:
@@ -304,6 +300,7 @@ int       iNO_INTEG_pts;
          UnitsCopy( frame->eattr[n-1].work_section[14].dimen, sap->width.dimen );
       if(sap->tw.dimen != NULL)
          UnitsCopy( frame->eattr[n-1].work_section[15].dimen, sap->tw.dimen );
+      ZeroUnits( frame->eattr[n-1].work_section[16].dimen );
 
       break;
       case OFF:
@@ -312,116 +309,197 @@ int       iNO_INTEG_pts;
       break;
     }
 
-    if( !(strcmp(eap->elmt_type, "FIBER")) ) {  /* store hash table data to frame */
-       frame->eattr[n-1].work_fiber = (FIBER_ELMT *)MyCalloc(1,sizeof(FIBER_ELMT));
-       frame->eattr[n-1].work_fiber->no_fiber = fep->no_fiber+2;   /* default: 2 shear spring */
-       frame->eattr[n-1].work_fiber->fiber = (FIBER_ATTR *)MyCalloc(fep->no_fiber+2,sizeof(FIBER_ATTR));
-       for( i=0 ; i < fep->no_fiber+2 ; ++i ) {
-	 if( i < fep->no_fiber ) {
-	   frame->eattr[n-1].work_fiber->fiber[i].y.value = fep->fiber[i].y.value;
-	   frame->eattr[n-1].work_fiber->fiber[i].z.value = fep->fiber[i].z.value;
-	   frame->eattr[n-1].work_fiber->fiber[i].area.value = fep->fiber[i].area.value;
-	   frame->eattr[n-1].work_fiber->fiber[i].Es.value = fep->fiber[i].Es.value;
-	   frame->eattr[n-1].work_fiber->fiber[i].Et.value = fep->fiber[i].Et.value;
-	   frame->eattr[n-1].work_fiber->fiber[i].fy.value = fep->fiber[i].fy.value;
-	 }
-	 else {
-	   frame->eattr[n-1].work_fiber->fiber[i].y.value = 0.0;
-	   frame->eattr[n-1].work_fiber->fiber[i].z.value = 0.0;
+    /* store hash table data to frame */
+    if( !(strcmp(eap->elmt_type, "FIBER_2D"))  || !(strcmp(eap->elmt_type, "FIBER_3D")) 
+    ||  !(strcmp(eap->elmt_type, "FIBER_2DS")) || !(strcmp(eap->elmt_type, "FIBER_3DS")) ) {
 
-	   if( map->ks <= 0.0 )   /* default shear correction factor ks = 1.2 */
-	     frame->eattr[n-1].work_fiber->fiber[i].area.value
-                  = frame->eattr[n-1].work_section[10].value / 1.2;
-	   else
-	     frame->eattr[n-1].work_fiber->fiber[i].area.value
-                  = frame->eattr[n-1].work_section[10].value / map->ks;
+       if( !(strcmp(eap->elmt_type, "FIBER_2D")) || !(strcmp(eap->elmt_type, "FIBER_3D")) ) {
+          fep->no_shear = 1;  /* global shear spring for each element in one direction */
+          total_fiber = fep->no_fiber + (frame->no_dimen-1)*fep->no_shear;
 
-	   if( map->nu <= 0.0 )   /* default nu = 0.3 */
-              frame->eattr[n-1].work_material[4].value  = 0.3;
+          frame->eattr[n-1].work_fiber = (FIBER_ELMT *)MyCalloc(1,sizeof(FIBER_ELMT));
+          frame->eattr[n-1].work_fiber->no_fiber = fep->no_fiber;
+          frame->eattr[n-1].work_fiber->no_shear = fep->no_shear;
+          frame->eattr[n-1].work_fiber->fiber = 
+             (FIBER_ATTR *)MyCalloc(total_fiber, sizeof(FIBER_ATTR));
+          for( i=0 ; i < total_fiber ; ++i ) {
+             if( i < fep->no_fiber ) {  /* flexual fibers */
+                frame->eattr[n-1].work_fiber->fiber[i].y.value = fep->fiber[i].y.value;
+                frame->eattr[n-1].work_fiber->fiber[i].z.value = fep->fiber[i].z.value;
+                frame->eattr[n-1].work_fiber->fiber[i].area.value = fep->fiber[i].area.value;
+                frame->eattr[n-1].work_fiber->fiber[i].Es.value = fep->fiber[i].Es.value;
+                frame->eattr[n-1].work_fiber->fiber[i].Et.value = fep->fiber[i].Et.value;
+                frame->eattr[n-1].work_fiber->fiber[i].fy.value = fep->fiber[i].fy.value;
+                frame->eattr[n-1].work_fiber->fiber[i].Gs.value = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].Gt.value = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].fv.value = 0.0;
+             }
+             else {  /* shear spring */
+                frame->eattr[n-1].work_fiber->fiber[i].y.value  = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].z.value  = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].Gs.value = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].Gt.value = 0.0;
+                frame->eattr[n-1].work_fiber->fiber[i].fv.value = 0.0;
 
-	   if( map->G.value <= 0.0 )   /* G = E/2/(1+nu) */
-	     frame->eattr[n-1].work_fiber->fiber[i].Es.value
-		  = map->E.value/2.0/(1.0+frame->eattr[n-1].work_material[4].value);
-	   else
-	     frame->eattr[n-1].work_fiber->fiber[i].Es.value = map->G.value;
+                if( sap->ks <= 0.0 )   /* default shear correction factor ks = 1.2 */
+                   frame->eattr[n-1].work_fiber->fiber[i].area.value
+                    = frame->eattr[n-1].work_section[10].value / 1.2;
+                else
+                   frame->eattr[n-1].work_fiber->fiber[i].area.value
+                    = frame->eattr[n-1].work_section[10].value / sap->ks;
 
-	   if( map->Gt.value <= 0.0 ) {
-	     if( map->ET.value <= 0.0 )   /* Et not exist, assume always linear, Et=Es */
-	       frame->eattr[n-1].work_fiber->fiber[i].Et.value
-	            = frame->eattr[n-1].work_fiber->fiber[i].Es.value;
-	     else
-	       frame->eattr[n-1].work_fiber->fiber[i].Et.value
-		    = map->ET.value/2.0/(1.0+frame->eattr[n-1].work_material[4].value);
-	   }
-	   else
-	     frame->eattr[n-1].work_fiber->fiber[i].Et.value = map->Gt.value;
+                if( map->nu <= 0.0 )   /* default nu = 0.3 */
+                   frame->eattr[n-1].work_material[4].value  = 0.3;
 
-	   if( map->fv.value <= 0.0 )   /* use fy as shear yielding stress */
-	     frame->eattr[n-1].work_fiber->fiber[i].fy.value = map->fy.value;
-	   else
-	     frame->eattr[n-1].work_fiber->fiber[i].fy.value = map->fv.value;
-	 }
+                if( map->G.value <= 0.0 )   /* G = E/2/(1+nu) */
+                   if( map->E.value <= 0.0 )
+                      frame->eattr[n-1].work_fiber->fiber[i].Es.value
+                       = frame->eattr[n-1].work_fiber->fiber[0].Es.value/2.0/(1.0+frame->eattr[n-1].work_material[4].value);
+                   else
+                      frame->eattr[n-1].work_fiber->fiber[i].Es.value
+                       = map->E.value/2.0/(1.0+frame->eattr[n-1].work_material[4].value);
+                else
+                   frame->eattr[n-1].work_fiber->fiber[i].Es.value = map->G.value;
 
-         if(UNITS_SWITCH == ON) {
-	   frame->eattr[n-1].work_fiber->fiber[i].y.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
-	   frame->eattr[n-1].work_fiber->fiber[i].z.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
-	   frame->eattr[n-1].work_fiber->fiber[i].area.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
-	   frame->eattr[n-1].work_fiber->fiber[i].Es.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
-	   frame->eattr[n-1].work_fiber->fiber[i].Et.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
-	   frame->eattr[n-1].work_fiber->fiber[i].fy.dimen
-                = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                if( map->Gt.value <= 0.0 ) {
+                   if( map->ET.value <= 0.0 )   /* Et not exist, assume always linear, Et=Es */
+                      frame->eattr[n-1].work_fiber->fiber[i].Et.value
+                       = frame->eattr[n-1].work_fiber->fiber[i].Es.value;
+                   else
+                      frame->eattr[n-1].work_fiber->fiber[i].Et.value
+                       = map->ET.value/2.0/(1.0+frame->eattr[n-1].work_material[4].value);
+                }
+                else
+                   frame->eattr[n-1].work_fiber->fiber[i].Et.value = map->Gt.value;
 
-	   if( i < fep->no_fiber ) {
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].y.dimen, fep->fiber[i].y.dimen );
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].z.dimen, fep->fiber[i].z.dimen );
-	     /*
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].area.dimen, fep->fiber[i].area.dimen );
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, fep->fiber[i].Es.dimen );
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, fep->fiber[i].Et.dimen );
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, fep->fiber[i].fy.dimen );
-	     */
-	   }
-	   else {
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].y.dimen, fep->fiber[0].y.dimen );
-             UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].z.dimen, fep->fiber[0].z.dimen );
+                if( map->fv.value <= 0.0 )   /* use fy as shear yielding stress */
+                   if( map->fy.value <= 0.0 )
+                      frame->eattr[n-1].work_fiber->fiber[i].fy.value
+                       = frame->eattr[n-1].work_fiber->fiber[0].fy.value;
+                   else
+                      frame->eattr[n-1].work_fiber->fiber[i].fy.value = map->fy.value;
+                else
+                   frame->eattr[n-1].work_fiber->fiber[i].fy.value = map->fv.value;
+             }
 
-	     /*
-	     UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].area.dimen, frame->eattr[n-1].work_section[10].dimen );
+             if(UNITS_SWITCH == ON) {
+                frame->eattr[n-1].work_fiber->fiber[i].y.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].z.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].area.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Es.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Et.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].fy.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Gs.dimen = (DIMENSIONS *) NULL;
+                frame->eattr[n-1].work_fiber->fiber[i].Gt.dimen = (DIMENSIONS *) NULL;
+                frame->eattr[n-1].work_fiber->fiber[i].fv.dimen = (DIMENSIONS *) NULL;
 
-	     if( map->G.value <= 0.0 )
-	       UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, map->E.dimen );
-	     else
-	       UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, map->G.value );
+                if( i < fep->no_fiber ) {  /* flexual fibers */
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].y.dimen, fep->fiber[i].y.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].z.dimen, fep->fiber[i].z.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].area.dimen, fep->fiber[i].area.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, fep->fiber[i].Es.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, fep->fiber[i].Et.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, fep->fiber[i].fy.dimen );
+                }
+                else {  /* shear spring */
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].y.dimen, fep->fiber[0].y.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].z.dimen, fep->fiber[0].z.dimen );
+                   UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].area.dimen, frame->eattr[n-1].work_section[10].dimen );
 
-	     if( map->Gt.value <= 0.0 ) {
-	       if( map->ET.value <= 0.0 )
-	         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen,
-	                    frame->eattr[n-1].work_fiber->fiber[i].Es.dimen );
-	       else
-	         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, map->ET.dimen );
-	     }
-	     else
-	       UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, map->Gt.dimen );
+                   if( map->G.value <= 0.0 )
+                      if( map->E.value <= 0.0 )
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen,
+                                    frame->eattr[n-1].work_fiber->fiber[0].Es.dimen );
+                      else
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, map->E.dimen );
+                   else
+                      UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, map->G.dimen );
 
-	     if( map->fv.value <= 0.0 )
-	       UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, map->fy.dimen );
-	     else
-	       UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, map->fv.dimen );
-	       */
-	   }
-         } /* UNIT_SWITCH == ON */
-       } /* i=0, i<fep->no_fiber+2 */
-    } /* eap->elmt_type == FIBER */
+                   if( map->Gt.value <= 0.0 ) {
+                      if( map->ET.value <= 0.0 )
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen,
+                                    frame->eattr[n-1].work_fiber->fiber[i].Es.dimen );
+                      else
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, map->ET.dimen );
+                   }
+                   else
+                      UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, map->Gt.dimen );
+
+                   if( map->fv.value <= 0.0 )
+                      if( map->fy.value <= 0.0 )
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen,
+                                    frame->eattr[n-1].work_fiber->fiber[0].fy.dimen );
+                      else
+                         UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, map->fy.dimen );
+                   else
+                      UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, map->fv.dimen );
+                }
+             } /* UNIT_SWITCH == ON */
+          } /* i=0, i<total_fiber */
+       } /* FIBER_2D and FIBER_3D */
+
+       else {  /* FIBER_2DS and FIBER_3DS */
+          fep->no_shear = fep->no_fiber;  /* individual shear spring for each fiber in one direction */
+          frame->eattr[n-1].work_fiber = (FIBER_ELMT *)MyCalloc(1,sizeof(FIBER_ELMT));
+          frame->eattr[n-1].work_fiber->no_fiber = fep->no_fiber;
+          frame->eattr[n-1].work_fiber->no_shear = fep->no_shear;
+          frame->eattr[n-1].work_fiber->fiber = 
+             (FIBER_ATTR *)MyCalloc(fep->no_fiber,sizeof(FIBER_ATTR));
+          for( i=0 ; i < fep->no_fiber ; ++i ) {
+             frame->eattr[n-1].work_fiber->fiber[i].y.value = fep->fiber[i].y.value;
+             frame->eattr[n-1].work_fiber->fiber[i].z.value = fep->fiber[i].z.value;
+             frame->eattr[n-1].work_fiber->fiber[i].area.value = fep->fiber[i].area.value;
+             frame->eattr[n-1].work_fiber->fiber[i].Es.value = fep->fiber[i].Es.value;
+             frame->eattr[n-1].work_fiber->fiber[i].Et.value = fep->fiber[i].Et.value;
+             frame->eattr[n-1].work_fiber->fiber[i].fy.value = fep->fiber[i].fy.value;
+             frame->eattr[n-1].work_fiber->fiber[i].Gs.value = fep->fiber[i].Gs.value;
+             frame->eattr[n-1].work_fiber->fiber[i].Gt.value = fep->fiber[i].Gt.value;
+             frame->eattr[n-1].work_fiber->fiber[i].fv.value = fep->fiber[i].fv.value;
+
+             if(UNITS_SWITCH == ON) {
+                frame->eattr[n-1].work_fiber->fiber[i].y.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].z.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].area.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Es.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Et.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].fy.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Gs.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].Gt.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+                frame->eattr[n-1].work_fiber->fiber[i].fv.dimen
+                 = (DIMENSIONS *)MyCalloc( 1, sizeof(DIMENSIONS) );
+
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].y.dimen, fep->fiber[i].y.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].z.dimen, fep->fiber[i].z.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].area.dimen, fep->fiber[i].area.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Es.dimen, fep->fiber[i].Es.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Et.dimen, fep->fiber[i].Et.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fy.dimen, fep->fiber[i].fy.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Gs.dimen, fep->fiber[i].Gs.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].Gt.dimen, fep->fiber[i].Gt.dimen );
+                UnitsCopy( frame->eattr[n-1].work_fiber->fiber[i].fv.dimen, fep->fiber[i].fv.dimen );
+             } /* UNIT_SWITCH == ON */
+          } /* i=0, i<fep->no_fiber */
+       } /* FIBER_2DS and FIBER_3DS */
+    } /* eap->elmt_type == FIBER_** */
 
      /* DOF of nodes in a elment */
 
       FLAG = FALSE;
-      for (i = 0; i <= NO_ELEMENTS_IN_LIBRARY ; i++) {
+      for (i = 0; i < NO_ELEMENTS_IN_LIBRARY ; i++) {
           if((elmt_library[i].name) != NULL &&
              Streq(frame->eattr[n-1].elmt_type, elmt_library[i].name)) {
              no_dof   = elmt_library[i].no_dof;
@@ -445,113 +523,5 @@ int       iNO_INTEG_pts;
 
 #ifdef DEBUG
        printf("*** Leave assign_properties()\n");
-#endif
-}
-
-#ifdef __STDC__
-void print_property(EFRAME *frp, int i)
-#else
-void print_property(frp, i)
-EFRAME    *frp;
-int          i;                 /* elmt_attr_no */
-#endif
-{
-int     UNITS_SWITCH;
-ELEMENT_ATTR    *eap;
-
-#ifdef DEBUG
-       printf("*** Enter print_property()\n");
-#endif
-
-     UNITS_SWITCH = CheckUnits();
-     eap = &frp->eattr[i-1];
-
-     if(frp->no_dof == 3 || frp->no_dof == 2) { 
-        printf("             ");
-        printf("         : gdof [0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
-                        eap->map_ldof_to_gdof[0],
-                        eap->map_ldof_to_gdof[1],
-                        eap->map_ldof_to_gdof[2]);
-     }
-
-     if(frp->no_dof == 6) { /* 3d analysis */
-        printf("             ");
-        printf("         : dof-mapping : gdof[0] = %4d : gdof[1] = %4d : gdof[2] = %4d\n",
-                        eap->map_ldof_to_gdof[0],
-                        eap->map_ldof_to_gdof[1],
-                        eap->map_ldof_to_gdof[2]);
-        printf("             ");
-        printf("                         gdof[3] = %4d : gdof[4] = %4d : gdof[5] = %4d\n",
-                        eap->map_ldof_to_gdof[3],
-                        eap->map_ldof_to_gdof[4],
-                        eap->map_ldof_to_gdof[5]);
-     } 
-
-     switch(UNITS_SWITCH) {
-       case ON:
-        UnitsSimplify( eap->work_material[0].dimen );
-        UnitsSimplify( eap->work_material[2].dimen );
-        UnitsSimplify( eap->work_material[5].dimen );
-        UnitsSimplify( eap->work_section[2].dimen );
-        UnitsSimplify( eap->work_section[10].dimen );
-	if( eap->work_material[0].dimen->units_name != NULL ) {
-           printf("             ");
-           printf("         : Young's Modulus =  E = %16.3e %s\n",
-                           eap->work_material[0].value/eap->work_material[0].dimen->scale_factor,
-                           eap->work_material[0].dimen->units_name);
-	}
-	if( eap->work_material[4].value != 0.0 ) {
-           printf("             ");
-           printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
-	}
-	if( eap->work_material[2].dimen->units_name != NULL ) {
-          printf("             ");
-          printf("         : Yielding Stress = fy = %16.3e %s\n",
-                           eap->work_material[2].value/eap->work_material[2].dimen->scale_factor,
-                           eap->work_material[2].dimen->units_name);
-	}
-	if( eap->work_material[5].dimen->units_name != NULL ) {
-          printf("             ");
-          printf("         : Density         = %16.3e %s\n",
-                           eap->work_material[5].value/eap->work_material[5].dimen->scale_factor,
-                           eap->work_material[5].dimen->units_name);
-	}
-	if( eap->work_section[2].dimen->units_name != NULL ) {
-          printf("             ");
-          printf("         : Inertia Izz     = %16.3e %s\n",
-                           eap->work_section[2].value/eap->work_section[2].dimen->scale_factor,
-                           eap->work_section[2].dimen->units_name);
-	}
-	if( eap->work_section[10].dimen->units_name != NULL ) {
-          printf("             ");
-          printf("         : Area            = %16.3e %s\n",
-                           eap->work_section[10].value/eap->work_section[10].dimen->scale_factor,
-                           eap->work_section[10].dimen->units_name);
-	}
-       break;
-       case OFF:
-         printf("             ");
-         printf("         : Young's Modulus =  E = %16.3e\n",
-                            eap->work_material[0].value);
-         printf("             ");
-         printf("         : Yielding Stress = fy = %16.3e\n",
-                            eap->work_material[2].value);
-         printf("             ");
-         printf("         : Poisson's ratio = nu = %16.3e   \n", eap->work_material[4].value);
-         printf("             ");
-         printf("         : Density         = %16.3e\n",
-                            eap->work_material[5].value);
-         printf("             ");
-         printf("         : Inertia Izz     = %16.3e\n",
-                            eap->work_section[2].value);
-         printf("             ");
-         printf("         : Area            = %16.3e\n",
-                            eap->work_section[10].value);
-        break;
-        default:
-        break;
-     }
-#ifdef DEBUG
-       printf("*** Leave print_property()\n");
 #endif
 }

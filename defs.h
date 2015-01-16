@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *               defs.h : Standard definitions
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  defs.h : Standard definitions
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,7 +20,7 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
@@ -111,27 +112,6 @@ float BETA;
 #define IMPLICIT       -1
 #define EXPLICIT        1
 
-/* ------------------------- */
-/* Cases for Element Library */
-/* ------------------------- */
-
-#define PROPTY             1 
-#define CHERROR            2   
-#define ELMT_S_MAT         3
-#define STIFF              3 
-#define AXISYM             3
-#define STRESS             4
-#define MASS_MATRIX        5 
-#define LOAD_MATRIX        6
-#define PRESSLD            7
-#define STRESS_LOAD        8
-#define EQUIV_NODAL_LOAD   9
-#define ACCELERATION_LOAD  10
-#define STRESS_UPDATE      11
-
-#define ATTR               15
-#define ELEMENT_LIBRARY    1000
-
 /* --------------------------------------------- */
 /* UNIT_QTYs  definitions for INITIAL ALLOCATION */
 /* --------------------------------------------- */
@@ -154,7 +134,7 @@ float BETA;
 #define UNIT_SECTION_ATTR    20   /* must >= no. of variables in data structures SECTION_ATTR defined in fe_database.h */
 #define UNIT_MATERIAL_ATTR   20   /* must >= no. of variables in data structures MATERIAL_ATTR defined in fe_database.h */
 
-#define UNIT_ELEMENT_ATTR    17 
+#define UNIT_ELEMENT_ATTR    15
 #define MAX_NO_MEMBER_LOADS  10
 
 /* -------------------------------------------- */
@@ -175,7 +155,6 @@ extern  int   max_no_loaded_elmts;
 extern  int   TDOF;
 extern  int   TNEQ;
 extern  int   MDOF;
-extern  int   UNITS_TYPE;
 
 int   H_Print;
 int   STATE_PLASTIC;
@@ -189,26 +168,7 @@ int   NODES_PER_ELMT; /* not the max nodes per element */
 
 extern  unsigned int PRINT_PROFILE;
 extern  unsigned int PRINT_PLINK;
-extern  unsigned int PRINT_EFRAME;
-extern  unsigned int PRINT_E_NUM;
-extern  unsigned int PRINT_E_STIFF;
-extern  unsigned int PRINT_G_STIFF;
-extern  unsigned int PRINT_E_MASS;
-extern  unsigned int PRINT_R_MASS;
-extern  unsigned int PRINT_G_MASS;
-extern  unsigned int PRINT_E_DESTIN;
-extern  unsigned int PRINT_R_DESTIN;
-extern  unsigned int PRINT_E_DESTIN_SIZE;
-extern  unsigned int PRINT_R_DESTIN_SIZE;
-extern  unsigned int PRINT_LOAD_VECTOR;
-extern  unsigned int PRINT_RESPONSE_VECTOR;
-extern  unsigned int PRINT_DISP;
-extern  unsigned int PRINT_NODAL_DISP;
-extern  unsigned int PRINT_RIGIDBODY_DISP;
-extern  unsigned int PRINT_STRESS;
-extern  unsigned int PRINT_STORY_DRIFT;
-extern  unsigned int PRINT_ELEM_LOAD;
-extern  unsigned int PRINT_FEF;
+extern  unsigned int PRINT_MAP_DOF;
 
 /* =================================== */
 /* constraints and boundary conditions */
@@ -218,3 +178,14 @@ extern  unsigned int PRINT_FEF;
 #define      NOTFIXED  1
 #define UNCONSTRAINED  0
 
+/* =============================== */
+/* Define for FreeBSD platform     */
+/* =============================== */
+
+#ifdef _HAVE_PARAM_H
+#include <sys/param.h>
+#endif
+
+#ifdef __FreeBSD__
+#include <floatingpoint.h>
+#endif

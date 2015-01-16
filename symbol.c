@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *             symbol.c : Symbol Table : Modified to take (multiple) numbers.
+ *  ALADDIN Version 2.0 :
+ *                                                                     
+ *  symbol.c : Symbol Table : Modified to take (multiple) numbers.
  *                                                                     
  *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -26,11 +27,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "miscellaneous.h"
 
 #define TABLE_SIZE 101
 

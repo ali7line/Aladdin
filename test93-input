@@ -1,0 +1,78 @@
+/* 
+ *  =====================================================================
+ *  Analysis of Five Story Steel Moment Resistant Frame 
+ * 
+ *  Written By: Mark Austin                                 October, 1994
+ *  =====================================================================
+ */ 
+
+/* [a] : Setup problem specific parameters */
+
+   NDimension         = 2;
+   NDofPerNode        = 3;
+   MaxNodesPerElement = 2;
+
+   StartMesh();
+
+/* [b] : Generate two-dimensional grid of nodes */
+
+   AddNode( 1, [ 0.0 m, 0 m ] );
+   AddNode( 2, [ 0.0 m, 3 m ] );
+   AddNode( 3, [ 2.5 m, 4 m ] );
+   AddNode( 4, [ 5.0 m, 3 m ] );
+   AddNode( 5, [ 5.0 m, 0 m ] );
+   AddNode( 6, [ 0.0 m, 3 m ] );
+   AddNode( 7, [ 5.0 m, 3 m ] );
+
+/* [c] : Attach column elements to nodes */
+
+   AddElmt( 1, [ 1 , 2 ], "mycolumn");
+   AddElmt( 2, [ 2 , 3 ], "mycolumn");
+   AddElmt( 3, [ 3 , 4 ], "mycolumn");
+   AddElmt( 4, [ 4 , 5 ], "mycolumn");
+   AddElmt( 5, [ 6 , 7 ], "mycolumn");
+
+/* [e] : Define section and material properties */
+
+   ElementAttr("mycolumn") { type     = "FRAME_2D";
+                             section  = "mysection1";
+                             material = "mymaterial";
+                           }
+
+   SectionAttr("mysection1") { Izz    = 0.0000035 m^4;
+                               area   =   0.00212 m^2;
+                             }
+
+   MaterialAttr("mymaterial") { poisson = 0.25;
+                                E       = 2e9 N / m^2;
+                              }
+
+/* [f] : Apply full-fixity to columns at foundation level */
+
+   FixNode( 1, [ 1, 1, 1 ]);
+   FixNode( 5, [ 1, 1, 1 ]);
+
+   LinkNode([  2,  6 ], [ 1, 1, 0] );
+   LinkNode([  4,  7 ], [ 1, 1, 0] );
+
+/* [g] : Compute equivalent nodal loads for distributed "dead + live" loads plus  */
+/*       lateral wind loads                                                       */
+
+   NodeLoad( 2, [ 0 N, 1125 N, -520 N*m ]); 
+   NodeLoad( 3, [ 0 N, 1125 N,  520 N*m ]); 
+
+/* [h] : Compile and Print Finite Element Mesh */
+
+   EndMesh();
+   PrintMesh(); 
+
+/* [i] : Compute "stiffness" and "external load" matrices */
+
+   eload = ExternalLoad();
+   stiff = Stiff();
+
+   displ = Solve(stiff, eload);
+
+   PrintDispl(displ);
+   PrintStress(displ); 
+   quit;

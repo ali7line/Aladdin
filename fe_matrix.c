@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *          fe_matrix.c : Functions to solve (non)linear FE solution procedures
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  fe_matrix.c : Functions to solve (non)linear FE solution procedures
+ *                                                                     
+ *  Copyright (C) 1995-1998 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,13 +20,12 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin      December 1995
+ *  Written by: Mark Austin, Xiaoguang Chen, and Wane-Jang Lin           May 1997
  *  ============================================================================= 
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #ifdef  __STDC__
 #include <stdarg.h>
 #else
@@ -33,22 +33,18 @@
 #endif
 
 #include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "fe_database.h"
 #include "symbol.h"
-#include "fe_functions.h"
 #include "vector.h"
+#include "fe_functions.h"
 #include "elmt.h"
+
 
 extern ARRAY     *array;
 extern EFRAME    *frame;
-
-static QUANTITY     *Fn;
-
-/*
-#define DEBUG
-*/
 
 /* 
  *  ------------------------------ 
@@ -58,7 +54,6 @@ static QUANTITY     *Fn;
 
 MATRIX *Form_Stiffness() {
 MATRIX      *stiff;
-ELEMENT        *el;
 MATRIX         *Ke; 
 int            *Ld;
 int        elmt_no;
@@ -104,6 +99,7 @@ int   *ipColHeight;
 
        array = Element_Property(array);  /* passing elmt info in             */
                                          /* elmt liberary to working array   */
+
        Ke = Element_Matrix(array, STIFF);/* set elment stiffness/mass matrix */
 
        if(Rigidbody_conn(frame,array) == YES)
@@ -112,7 +108,6 @@ int   *ipColHeight;
        /* transfer Destination array from frame to Ld */
 
        Ld    = Destination_Array(frame, elmt_no); 
-        
        stiff = Assemble_Global(stiff, frame, Ld, Ke);
 
        free((char *) Ld);
@@ -131,7 +126,6 @@ int   *ipColHeight;
 MATRIX *Form_Equiv_Nodal_Load() {
 MATRIX  *equiv_nodal_load;
 MATRIX        *nodal_load;
-ELEMENT               *el;
 MATRIX                *Fe; 
 int                   *Ld;
 int               elmt_no;
@@ -269,7 +263,7 @@ int   *ipColHeight;
     for(rigid_no = 1; rigid_no <= frame->no_rigid; rigid_no++) {
 
         array       = Assign_p_Array_for_Rigid_Body(frame, rigid_no, array, MASS_MATRIX);
-        array->type = mass_type;                                                          * LUMPED or CONSISTENT * 
+        array->type = mass_type;                                 * LUMPED or CONSISTENT * 
 
         Me = Element_Matrix(array,MASS_MATRIX);
         Me = Transform_Rigid_Body_Mass_Matrix(frame, array, Me);
@@ -381,6 +375,7 @@ va_list          arg_ptr;
 MATRIX       *displ_incr;
 MATRIX             *load;
 ELEMENT              *ep;
+ELEMENT_ATTR        *eap;
 int     node_no, elmt_no;
 int     i, j, k, jj, *Ld; 
 int         elmt_attr_no;
@@ -419,10 +414,13 @@ int itemp;
    for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) { 
 
    ep = &frame->element[elmt_no-1];
-   if(displ_incr == (MATRIX *) NULL)
-      ep->esp->state = 0; /* Calculate internal load as elastic behaviour */
-   else
-      ep->esp->state = 1; /* Need check for ELASTIC PLASTIC STATE */
+   eap = &(frame->eattr[ep->elmt_attr_no-1]);
+   if( !(strcmp(eap->elmt_type, "SHELL_4N")) || !(strcmp(eap->elmt_type, "SHELL_8N")) ) {
+      if(displ_incr == (MATRIX *) NULL)
+         ep->esp->state = 0; /* Calculate internal load as elastic behaviour */
+      else
+         ep->esp->state = 1; /* Need check for ELASTIC PLASTIC STATE */
+   }
 
    array = Assign_p_Array(frame, elmt_no, array, STRESS);
    array = elmlib(array, PROPTY);
@@ -566,6 +564,168 @@ int itemp;
     return(load);
 }
 
+/* 
+ *  ==============================================================
+ *  Update the displacements in frame and coordinates of nodes
+ * 
+ *  Usage : UpdateDispl(displ)         
+ *  ==============================================================
+ */ 
+ 
+#ifdef  __STDC__
+void UpdateDispl( MATRIX *m1)
+#else
+void UpdateDispl( disple)
+#endif
+{
+#ifndef __STDC__
+MATRIX            *m1;
+#endif
+
+ELEMENT              *ep;
+ELEMENT_ATTR        *eap;
+
+int     node_no, elmt_no, dof_per_node, nodes_per_elmt;
+int elmt_attr_no;
+int     i, j, k, jj, ii; 
+int         UNITS_SWITCH;
+
+#ifdef DEBUGZJ
+       printf("*** Enter UpdateDispl()\n");
+#endif
+
+   UNITS_SWITCH = CheckUnits();
+
+   /* Transfer displacements to nodes in frame */
+   if( UNITS_SWITCH == ON ) {
+
+      for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
+	for(j  = 1; j <= frame->no_dof; j++){
+          jj = frame->node[node_no - 1].bound_id[j-1];
+          if(jj > 0) {
+	    if(m1->spRowUnits[jj-1].units_name != NULL ) {
+	      UnitsTypeConvert(&(m1->spRowUnits[jj-1]), CheckUnitsType());
+	    }
+	    RadUnitsSimplify( &(m1->spRowUnits[jj-1]) );
+	    frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
+	    UnitsCopy( frame->node[node_no-1].disp[j-1].dimen, &(m1->spRowUnits[jj-1]) );
+          } else {
+	    switch(CheckUnitsType()) {
+	    case SI:
+	      if( (frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
+		  !strcmp( frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_F"))
+		
+		frame->node[node_no -1].disp[j-1].value
+		  = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
+				     frame->node[node_no -1].disp[j-1].value, US);
+	      break;
+	    case US:
+	      if((frame->node[node_no-1].disp[j-1].dimen->units_name != NULL) &&
+		 !strcmp(frame->node[node_no-1].disp[j-1].dimen->units_name, "deg_C"))
+		
+		frame->node[node_no -1].disp[j-1].value
+		  = ConvertTempUnits(frame->node[node_no-1].disp[j-1].dimen->units_name,
+				     frame->node[node_no -1].disp[j-1].value, SI);
+	      break;
+	    }
+	    
+             RadUnitsSimplify( frame->node[node_no-1].disp[j-1].dimen );
+	     
+	  }
+	}
+      }
+   }
+
+
+   if( UNITS_SWITCH == OFF ) {
+     
+     for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
+       for(j  = 1; j <= frame->no_dof; j++){
+	 jj = frame->node[node_no - 1].bound_id[j-1];
+	 if(jj > 0) {
+	   frame->node[node_no-1].disp[j-1].value = m1->uMatrix.daa[jj-1][0];
+	 }
+       }
+     }
+   }
+
+   /* Change the coordiates of nodes */
+   for(node_no = 1; node_no <= frame->no_nodes; node_no++) {
+       for(j  = 1; j <= frame->no_dof-1; j++){
+	 jj = frame->node[node_no - 1].bound_id[j-1];
+	 if(jj > 0) {
+	   frame->node[node_no-1].coord[j-1].value = frame->node[node_no-1].coord[j-1].value +
+	                                             frame->node[node_no-1].disp[j-1].value;
+	 }
+       }
+   }
+
+ /* Transfer Displacements to element in frame */
+if(m1 != (MATRIX *) NULL)
+  for(elmt_no = 1; elmt_no <= frame->no_elements; elmt_no++) {
+    ep           = &frame->element[elmt_no-1];
+    elmt_attr_no = ep->elmt_attr_no;  
+    eap          = &frame->eattr[elmt_attr_no-1];
+    for(i=1; i <= frame->no_nodes_per_elmt; i++) {
+      k = 1; 
+      node_no = ep->node_connect[i-1];
+      for(j = 1; j <= frame->no_dof; j++) {
+	switch((int) frame->no_nodes_per_elmt) {
+	case 2:
+	case 3:
+	  ii = eap->map_ldof_to_gdof[j-1];
+	  jj = frame->node[node_no - 1].bound_id[ii-1];
+	  if(jj > 0) {
+	    ep->rp->displ->uMatrix.daa[j-1][i-1] = m1->uMatrix.daa[jj-1][0];
+	    if( UNITS_SWITCH == ON ) {
+	      UnitsCopy(&( ep->rp->displ->spRowUnits[j-1]), &(m1->spRowUnits[jj-1]));
+	      ZeroUnits(&( ep->rp->displ->spColUnits[i-1]));
+	    }
+	  } else {
+	    ep->rp->displ->uMatrix.daa[j-1][i-1]
+	      = frame->node[node_no -1].disp[ii-1].value;
+	    if( UNITS_SWITCH == ON ) {
+	      UnitsCopy(&( ep->rp->displ->spRowUnits[j-1]),
+			frame->node[node_no -1].disp[ii-1].dimen);
+	      ZeroUnits(&( ep->rp->displ->spColUnits[i-1]));
+	    }
+	  }
+#ifdef DEBUGZJ
+	  printf(" upd elmt=%d, ep[%d][%d]=%g\n", elmt_no, j-1, i-1,ep->rp->displ->uMatrix.daa[j-1][i-1] );
+#endif    
+	  break;
+	case 4:
+	case 8:
+	  ii = eap->map_ldof_to_gdof[k-1];
+	  jj = frame->node[node_no - 1].bound_id[ii-1];
+	  if(jj > 0) {
+	    ep->rp->displ->uMatrix.daa[k-1][i-1] = m1->uMatrix.daa[jj-1][0];
+	    if( UNITS_SWITCH == ON ) {
+	      UnitsCopy(&( ep->rp->displ->spRowUnits[k-1]), &(m1->spRowUnits[jj-1]));
+	      ZeroUnits( &( ep->rp->displ->spColUnits[i-1]) );
+	    }
+	  } else {
+	    ep->rp->displ->uMatrix.daa[k-1][i-1]
+	      = frame->node[node_no -1].disp[ii-1].value;
+	    if( UNITS_SWITCH == ON ) {
+	      UnitsCopy( &( ep->rp->displ->spRowUnits[k-1]),
+			 frame->node[node_no -1].disp[ii-1].dimen);
+	      ZeroUnits( &( ep->rp->displ->spColUnits[i-1]) );
+	    }
+	  }
+	  k = k + 1;
+	  break;
+	default:
+	  break;
+	}
+      }
+    }
+    /* Transfer p to RespondBuffer */
+  SaveRespondBuffer1(ep, elmt_no ); 
+  }
+   
+}
+
 
 /* 
  *  =================================================
@@ -587,21 +747,17 @@ EFRAME *frame;
 int    elmt_no;
 #endif
 {
-ELEMENT *el;
-int     i,no_dof_per_elmt, *Ld;
-      
-#ifdef DEBUG
-    printf(" enter Destination_Array() \n");
-    printf(" in Destination_Array() : \n");
-    printf("                        : frame->no_dof = %d \n", frame->no_dof);
-    printf("                        : frame->no_nodes_per_elmt = %d \n", frame->no_nodes_per_elmt);
-#endif
 
-    no_dof_per_elmt  = frame->no_dof*frame->no_nodes_per_elmt;
-
+  ELEMENT *el;
+  int     i,no_dof_per_elmt, *Ld;
+  
 #ifdef DEBUG
-    printf("                        : no_dof_per_elmt = %d \n", no_dof_per_elmt);
+    printf("  entering Destination_Array()  \n");
 #endif
+    
+  no_dof_per_elmt  = frame->no_dof*frame->no_nodes_per_elmt;
+
+
 
     Ld = iVectorAlloc((no_dof_per_elmt + 1));
 
@@ -1085,7 +1241,7 @@ double cx,cy,cz;
 #endif
 {
 int i,j,n;
-     for(n = 0; n <= NO_ELEMENTS_IN_LIBRARY; n++) { 
+     for(n = 0; n < NO_ELEMENTS_IN_LIBRARY; n++) { 
 
          if(!strcmp(type, elmt_library[n].name))
          break;
@@ -1534,31 +1690,8 @@ int  i,node, dof, nload;
    return (K);
 }
 
-/* ==================================== */
-/*   Function to compute nodal forces   */
-/* ==================================== */
-
-#ifdef __STDC__
-QUANTITY *Nodal_Forces(EFRAME *frp)
-#else
-QUANTITY *Nodal_Forces(frp)
-EFRAME   *frp;
-#endif
-{
-int i,j;
-
-    /* Initialize nodal force vector : Compute [K]*{d} = {Fn} */
-
-     for(i=1; i<=TDOF; i++) Fn[i].value = 0.;
-         for(i=1;i<=TDOF;i++)
-         for(j=1;j<=TDOF;j++)
-             Fn[i].value += K[i][j]*d[j];
-
-     return (Fn);
-}
-
 /* =======================================  */
-/*   Function to Assemble  Centrifugal  Load*/
+/* Function to Assemble  Centrifugal  Load  */
 /* =======================================  */
 
 #ifdef __STDC__
@@ -1590,9 +1723,18 @@ int i,node, dof, nload;
    return (fv);
 }
 
-
-
-/* Functions for design rule checking */
+
+/* 
+ *  =============================================================== 
+ *  Functions for design rule checking and analysis post-processing
+ *  =============================================================== 
+ *
+ *  Get_Coord() : Retrieve coordinates for a particular node.
+ *
+ *  Input  : Matrix *m     -- node number.
+ *  Output : Matrix *coord -- matrix of nodal coordinates.
+ *  =============================================================== 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Coord(MATRIX *m)
@@ -1604,10 +1746,6 @@ MATRIX *m;
 MATRIX *coord;
 int    nodeno;
 int        ii;
-
-#ifdef DEBUG
-       printf("*** Enter Get_Coord()\n");
-#endif
 
        nodeno = (int) m->uMatrix.daa[0][0];
        coord  = MatrixAllocIndirect("Node Coord", DOUBLE_ARRAY, 1, frame->no_dimen);
@@ -1624,12 +1762,17 @@ int        ii;
              coord->uMatrix.daa[0][ii] = frame->node[nodeno-1].coord[ii].value;
        }
 
-#ifdef DEBUG
-       printf("*** Leave Get_Coord()\n");
-#endif
-
     return(coord);
 }
+
+/* 
+ *  ================================================================= 
+ *  Get_Node() : Retrieve list of nodes attached to an element.
+ *
+ *  Input  : Matrix *m       -- element no.
+ *  Output : Matrix *connect -- matrix of nodes connected to element.
+ *  ================================================================= 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Node(MATRIX *m)
@@ -1641,10 +1784,6 @@ MATRIX *m;
 MATRIX *connect;
 int      elmtno;
 int          ii;
-
-#ifdef DEBUG
-       printf("*** Enter Get_Node()\n");
-#endif
 
        elmtno   = (int) m->uMatrix.daa[0][0];
        connect  = MatrixAllocIndirect("Node Connect", DOUBLE_ARRAY, 1, frame->no_nodes_per_elmt);
@@ -1661,12 +1800,17 @@ int          ii;
              connect->uMatrix.daa[0][ii] = (double) frame->element[elmtno-1].node_connect[ii];
        }
 
-#ifdef DEBUG
-       printf("*** Leave Get_Node()\n");
-#endif
-
     return(connect);
 }
+
+/* 
+ *  ================================================================= 
+ *  Get_Displ() : Return displacements at a particular node.
+ *
+ *  Input  : Matrix *m     -- node no.
+ *  Output : Matrix *displ -- matrix of nodes connected to element.
+ *  ================================================================= 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Displ(MATRIX *m1, MATRIX *m2)
@@ -1678,7 +1822,7 @@ MATRIX *m1, *m2;
 MATRIX *displ;
 int    nodeno;
 int     ii,jj;
-int UNITS_SWITCH;
+int UNITS_SWITCH, UnitsType;
 
 #ifdef DEBUG
        printf("*** Enter Get_Displ()\n");
@@ -1687,33 +1831,38 @@ int UNITS_SWITCH;
        nodeno = (int) m1->uMatrix.daa[0][0];
        displ  = MatrixAllocIndirect("Node Displ", DOUBLE_ARRAY, 1, frame->no_dof);
        UNITS_SWITCH = CheckUnits();
+       UnitsType    = CheckUnitsType();
 
-          switch( UNITS_SWITCH ) {
-            case ON:
-                   for( ii=0 ; ii<frame->no_dof ; ii++ ) {
-                      jj = frame->node[nodeno-1].bound_id[ii];
-                      if(jj > 0) {
-                         if(m2->spRowUnits[jj-1].units_name != NULL ) {
-                            UnitsTypeConvert(&(m2->spRowUnits[jj-1]), UNITS_TYPE);
-                         }
-                         RadUnitsSimplify( &(m2->spRowUnits[jj-1]) );
-                         frame->node[nodeno-1].disp[ii].value = m2->uMatrix.daa[jj-1][0];
-                         UnitsCopy( frame->node[nodeno-1].disp[ii].dimen, &(m2->spRowUnits[jj-1]) );
-                      }
-                      else
-                         RadUnitsSimplify( frame->node[nodeno-1].disp[ii].dimen );
-                  }
-              break;
-           case OFF:
-                  for( ii=0 ; ii<frame->no_dof ; ii++){
-                     jj = frame->node[nodeno-1].bound_id[ii];
-                     if(jj > 0)
-                        frame->node[nodeno-1].disp[ii].value = m2->uMatrix.daa[jj-1][0];
-                  }
-              break;
-           default:
-              break;
-          }
+       switch( UNITS_SWITCH ) {
+          case ON:
+               for( ii=0 ; ii < frame->no_dof ; ii++ ) {
+                    jj = frame->node[nodeno-1].bound_id[ii];
+                    if(jj > 0) {
+                       if(m2->spRowUnits[jj-1].units_name != NULL ) {
+                          UnitsTypeConvert(&(m2->spRowUnits[jj-1]), UnitsType);
+                       }
+                       RadUnitsSimplify( &(m2->spRowUnits[jj-1]) );
+                       frame->node[nodeno-1].disp[ii].value = m2->uMatrix.daa[jj-1][0];
+                       UnitsCopy( frame->node[nodeno-1].disp[ii].dimen, &(m2->spRowUnits[jj-1]) );
+                    }
+                    else {
+                       if ( ii < frame->no_dimen ) {
+                            UnitsCopy( frame->node[nodeno-1].disp[ii].dimen, 
+                                       frame->node[nodeno-1].coord[ii].dimen );
+                       }
+                    }
+               }
+               break;
+          case OFF:
+               for( ii=0 ; ii<frame->no_dof ; ii++){
+                    jj = frame->node[nodeno-1].bound_id[ii];
+                    if(jj > 0)
+                       frame->node[nodeno-1].disp[ii].value = m2->uMatrix.daa[jj-1][0];
+               }
+               break;
+          default:
+               break;
+       } 
 
        if( UNITS_SWITCH == ON ) {
           for( ii=0 ; ii<frame->no_dof ; ii++ ) {
@@ -1734,6 +1883,15 @@ int UNITS_SWITCH;
     return(displ);
 }
 
+/* 
+ *  ================================================================= 
+ *  Get_Stress() : Return stresses within an element.
+ *
+ *  Input  : Matrix *m      -- node no.
+ *  Output : Matrix *stress -- matrix of stresses within element.
+ *  ================================================================= 
+ */ 
+
 #ifdef __STDC__
 MATRIX *Get_Stress(MATRIX *m1, MATRIX *m2)
 #else
@@ -1741,111 +1899,126 @@ MATRIX *Get_Stress(m1,m2)
 MATRIX *m1, *m2;
 #endif
 {
-MATRIX *stress;
-int    elmt_no;
+MATRIX        *stress;
+ELEMENT           *ep;
+ELEMENT_ATTR     *eap;
+DIMENSIONS *dp_length;
 int UNITS_SWITCH;
-
-ELEMENT        *ep;
-ELEMENT_ATTR   *eap;
+int      elmt_no;
 int node_no, elmt_attr_no;
-int  i,j,k,ii,jj;
+int  i,j,k,ii,jj, iNoCols;
 
 #ifdef DEBUG
        printf("*** Enter Get_Stress()\n");
 #endif
 
-       elmt_no = (int) m1->uMatrix.daa[0][0];
-       stress  = MatrixAllocIndirect("Element Stress", DOUBLE_ARRAY, frame->no_nodes_per_elmt, frame->no_dof);
-       UNITS_SWITCH = CheckUnits();
+    elmt_no      = (int) m1->uMatrix.daa[0][0];
 
-#ifdef DEBUG
-        printf(" elmt No = %d \n", elmt_no);
-#endif
+    /* Allocate working array for elmt_no and assign element properties */
 
-           array = Assign_p_Array(frame, elmt_no, array, STRESS);
-           array = elmlib(array, PROPTY);
+    UNITS_SWITCH = CheckUnits();
+    array = Assign_p_Array(frame, elmt_no, array, STRESS);
+    array = elmlib(array, PROPTY);
 
-           /* Transfer Fixed Displacements */
+    /* Transfer Fixed Displacements */
 
-           ep           = &frame->element[elmt_no-1];
-           elmt_attr_no = ep->elmt_attr_no;  
-           eap          = &frame->eattr[elmt_attr_no-1];
-           for(i=1; i <= array->nodes_per_elmt; i++) {
-               k = 1; 
-               node_no = ep->node_connect[i-1];
-               for(j = 1; j <= array->dof_per_node; j++) {
-                   switch((int) array->nodes_per_elmt) {
-                     case 2:
-                     case 3:
-                        ii = eap->map_ldof_to_gdof[j-1];
-                        jj = frame->node[node_no - 1].bound_id[ii-1];
-                        if(jj > 0) {
-                           array->displ->uMatrix.daa[j-1][i-1] = m2->uMatrix.daa[jj-1][0];
-                           if( UNITS_SWITCH == ON ) {
-                              UnitsCopy(&(array->displ->spRowUnits[j-1]), &(m2->spRowUnits[jj-1]));
-                              ZeroUnits(&(array->displ->spColUnits[i-1]));
-                           }
+    ep           = &frame->element[elmt_no-1];
+    elmt_attr_no = ep->elmt_attr_no;  
+    eap          = &frame->eattr[elmt_attr_no-1];
+
+    for(i=1; i <= array->nodes_per_elmt; i++) {
+        k = 1; 
+        node_no = ep->node_connect[i-1];
+        for(j = 1; j <= array->dof_per_node; j++) {
+            switch( (int) array->nodes_per_elmt ) {
+                case 2:
+                case 3:
+                     ii = eap->map_ldof_to_gdof[j-1];
+                     jj = frame->node[node_no - 1].bound_id[ii-1];
+                     if(jj > 0) {
+                        array->displ->uMatrix.daa[j-1][i-1] = m2->uMatrix.daa[jj-1][0];
+                        if( UNITS_SWITCH == ON ) {
+                            UnitsCopy(&(array->displ->spRowUnits[j-1]), &(m2->spRowUnits[jj-1]));
+                            ZeroUnits(&(array->displ->spColUnits[i-1]));
                         }
-                        else {
-                           array->displ->uMatrix.daa[j-1][i-1]
+                     } else {
+                        array->displ->uMatrix.daa[j-1][i-1]
                            = frame->node[node_no -1].disp[ii-1].value;
-                           if( UNITS_SWITCH == ON ) {
-                              UnitsCopy(&(array->displ->spRowUnits[j-1]),
-                                frame->node[node_no -1].disp[ii-1].dimen);
-                              ZeroUnits(&(array->displ->spColUnits[i-1]));
-                           }
-                         }
-                         break;
-                    case 4:
-                    case 8:
-                        ii = eap->map_ldof_to_gdof[k-1];
-                        jj = frame->node[node_no - 1].bound_id[ii-1];
-                        if(jj > 0) {
-                           array->displ->uMatrix.daa[k-1][i-1] = m2->uMatrix.daa[jj-1][0];
-                           if( UNITS_SWITCH == ON ) {
-                              UnitsCopy(&(array->displ->spRowUnits[k-1]), &(m2->spRowUnits[jj-1]));
-                              ZeroUnits( &(array->displ->spColUnits[i-1]) );
-                           }
+                        if( UNITS_SWITCH == ON ) {
+                            UnitsCopy(&(array->displ->spRowUnits[j-1]),
+                                      frame->node[node_no -1].disp[ii-1].dimen);
+                            ZeroUnits(&(array->displ->spColUnits[i-1]));
                         }
-                        else {
-                           array->displ->uMatrix.daa[k-1][i-1]
+                     }
+                     break;
+                case 4:
+                case 8:
+                     ii = eap->map_ldof_to_gdof[k-1];
+                     jj = frame->node[node_no - 1].bound_id[ii-1];
+                     if(jj > 0) {
+                        array->displ->uMatrix.daa[k-1][i-1] = m2->uMatrix.daa[jj-1][0];
+                        if( UNITS_SWITCH == ON ) {
+                            UnitsCopy(&(array->displ->spRowUnits[k-1]), &(m2->spRowUnits[jj-1]));
+                            ZeroUnits( &(array->displ->spColUnits[i-1]) );
+                        }
+                     } else {
+                        array->displ->uMatrix.daa[k-1][i-1]
                            = frame->node[node_no -1].disp[ii-1].value;
-                           if( UNITS_SWITCH == ON ) {
-                              UnitsCopy( &(array->displ->spRowUnits[k-1]),
-                                frame->node[node_no -1].disp[ii-1].dimen);
-                              ZeroUnits( &(array->displ->spColUnits[i-1]) );
-                           }
+                        if( UNITS_SWITCH == ON ) {
+                            UnitsCopy( &(array->displ->spRowUnits[k-1]),
+                                       frame->node[node_no -1].disp[ii-1].dimen);
+                            ZeroUnits( &(array->displ->spColUnits[i-1]) );
                         }
-                        k = k + 1;
-                        break;
-                      default:
-                        break;
-                   }
-               }
+                     }
+                     k = k + 1;
+                     break;
+                 default:
+                     break;
            }
-	   PRINT_STRESS = OFF;
-           array = elmlib(array, STRESS);
+       }
+   }
 
-           for( i=1 ; i <= frame->no_dof ; i++ )
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1]
-                  = array->nodal_loads[frame->no_dof*(j-1)+i-1].value;
-           if( UNITS_SWITCH == ON ) {
-              for( i=1 ; i <= frame->no_dof ; i++ )
-                  UnitsCopy( &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]) , array->nodal_loads[i-1].dimen );
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  ZeroUnits( &(frame->element[elmt_no-1].rp->Forces->spColUnits[j-1]) );
-           }
+   /* Allocate memory for the array of element stresses/internal forces. */
 
-           for( i=1 ; i <= frame->no_dof ; i++ )
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  stress->uMatrix.daa[j-1][i-1] = frame->element[elmt_no-1].rp->Forces->uMatrix.daa[i-1][j-1];
-           if( UNITS_SWITCH == ON ) {
-              for( i=1 ; i <= frame->no_dof ; i++ )
-                  UnitsCopy( &(stress->spColUnits[i-1]), &(frame->element[elmt_no-1].rp->Forces->spRowUnits[i-1]) );
-              for( j=1 ; j <= frame->no_nodes_per_elmt ; j++ )
-                  ZeroUnits( &(stress->spRowUnits[j-1]) );
-           }
+   switch ( frame->no_dimen ) {
+       case 1:
+            iNoCols = 2;
+            break;
+       case 2:
+            iNoCols = 5;
+            break;
+       case 3:
+            iNoCols = 9;
+            break;
+       default:
+            break;
+   }
+
+   stress = MatrixAllocIndirect("Element Stress", DOUBLE_ARRAY,
+                                array->nodes_per_elmt, iNoCols );
+
+   /* Retrieve element level stresses/forces */
+
+   array = elmlib(array, STRESS_MATRIX );
+
+   /* Transfer "units" to "stress" matrix */
+
+   if( UNITS_SWITCH == ON ) {
+       for( i = 1; i <= 4*frame->no_dimen - 3 ; i++ ) {
+            UnitsCopy( &(stress->spColUnits[ i - 1 ]),
+                       &(array->stress->spColUnits[i-1]) );
+       }
+
+       for( j = 1; j <= array->nodes_per_elmt ; j++ ) {
+            ZeroUnits( &(stress->spRowUnits[j-1]) );
+       }
+   }
+
+   /* Transfer "coordinate" and "force/stress values" to "stress" matrix */
+
+   for( i = 1; i <= array->nodes_per_elmt; i++ )
+   for( j = 1; j <= 4*frame->no_dimen - 3 ; j++ )
+        stress->uMatrix.daa[i-1][j-1] = array->stress->uMatrix.daa[i-1][j-1];
 
 #ifdef DEBUG
        printf("*** Leave Get_Stress()\n");
@@ -1853,6 +2026,15 @@ int  i,j,k,ii,jj;
 
     return(stress);
 }
+
+/* 
+ *  ================================================================= 
+ *  Get_Dof() : Return dof associated with a particular node.
+ *
+ *  Input  : Matrix *m      -- node no.
+ *  Output : Matrix *gdof   -- matrix of degrees of freedom.
+ *  ================================================================= 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Dof(MATRIX *m)
@@ -1865,31 +2047,93 @@ MATRIX  *gdof;
 int    nodeno;
 int        ii;
 
-#ifdef DEBUG
-       printf("*** Enter Get_Dof()\n");
-#endif
+   nodeno = (int) m->uMatrix.daa[0][0];
+   gdof   = MatrixAllocIndirect("Node Global Dof", DOUBLE_ARRAY, 1, frame->no_dof);
 
-       nodeno = (int) m->uMatrix.daa[0][0];
-       gdof   = MatrixAllocIndirect("Node Global Dof", DOUBLE_ARRAY, 1, frame->no_dof);
-
-       if( CheckUnits() == ON ) {
-          for( ii=0 ; ii<frame->no_dof ; ii++ ) {
-             gdof->uMatrix.daa[0][ii] = (double) frame->node[nodeno-1].bound_id[ii];
-             ZeroUnits( &(gdof->spColUnits[ii]) );
-          }
-          ZeroUnits( &(gdof->spRowUnits[0]) );
+   if( CheckUnits() == ON ) {
+       for( ii=0 ; ii<frame->no_dof ; ii++ ) {
+            gdof->uMatrix.daa[0][ii] = (double) frame->node[nodeno-1].bound_id[ii];
+            ZeroUnits( &(gdof->spColUnits[ii]) );
        }
-       else {
-          for( ii=0 ; ii<frame->no_dof ; ii++ )
+       ZeroUnits( &(gdof->spRowUnits[0]) );
+   } else {
+       for( ii=0 ; ii<frame->no_dof ; ii++ )
              gdof->uMatrix.daa[0][ii] = (double) frame->node[nodeno-1].bound_id[ii];
-       }
+   }
 
-#ifdef DEBUG
-       printf("*** Leave Get_Dof()\n");
-#endif
-
-    return(gdof);
+   return(gdof);
 }
+
+
+/* 
+ *  ================================================================= 
+ *  Get_Stiffness() : Return element stiffness matrix 
+ *
+ *  Input  : Matrix *m      -- element no.
+ *  Output : Matrix *stiff  -- element stiffness matrix.
+ *
+ *  Note : This routine is a real hack (need to tidy up later).
+ *  ================================================================= 
+ */ 
+
+#ifdef __STDC__
+MATRIX *Get_Stiffness(MATRIX *m)
+#else
+MATRIX *Get_Stiffness(m)
+MATRIX *m;
+#endif
+{
+MATRIX      *stiff;
+MATRIX         *Ke; 
+MATRIX      *Ksave; 
+int        elmt_no;
+int        iElmtNo;
+
+   iElmtNo = (int) m->uMatrix.daa[0][0];
+
+   /* [a] : Compute element level stiffness matrices */
+
+   array = Assign_p_Array(frame, iElmtNo, array, STIFF);
+   array = Assign_p_Array(frame, iElmtNo, array, PROPTY);
+   array = Element_Property(array); 
+
+   /* [b] : Compute and save element level stiffness matrices */
+
+   Ke    = Element_Matrix(array, STIFF);
+   Ksave = MatrixCopy( Ke );
+
+   return( Ksave );
+}
+
+
+/* 
+ *  ==================================================================== 
+ *  Get_Section() : Return section properties of a particular element.
+ *
+ *  Input  : Matrix *m       -- elementno.
+ *  Output : Matrix *section -- matrix of section properties.
+ *  ==================================================================== 
+ *  The details are:
+ *
+ *      QUANTITY  Ixx;              [0]
+ *      QUANTITY  Iyy;              [1]
+ *      QUANTITY  Izz;              [2]
+ *      QUANTITY  Ixz;              [3]
+ *      QUANTITY  Ixy;              [4]
+ *      QUANTITY  Iyz;              [5]
+ *      QUANTITY  weight;           [6]  Section weight
+ *      QUANTITY  bf;               [7]  Width of flange
+ *      QUANTITY  tf;               [8]  thickness of flange
+ *      QUANTITY  depth;            [9]  Section depth
+ *      QUANTITY  area;             [10] Section area
+ *      QUANTITY  plate_thickness;  [11]
+ *      QUANTITY  tor_const;        [12] Torsional Constant J
+ *      QUANTITY  rT;               [13] Section radius of gyration
+ *      QUANTITY  width;            [14] Section width
+ *      QUANTITY  tw;               [15] Thickness of web
+ *      double    ks;               [16] Shear Section Correction Factor
+ *  ==================================================================== 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Section(MATRIX *m)
@@ -1907,114 +2151,97 @@ SECTION_ATTR *sap;
 #ifdef DEBUG
        printf("*** Enter Get_Section()\n");
 #endif
-/*
-        QUANTITY      Ixx;              [0]
-        QUANTITY      Iyy;              [1]
-        QUANTITY      Izz;              [2]
-        QUANTITY      Ixz;              [3]
-        QUANTITY      Ixy;              [4]
-        QUANTITY      Iyz;              [5]
-        QUANTITY      weight;           [6]  Section weight
-        QUANTITY      bf;               [7]  Width of flange
-        QUANTITY      tf;               [8]  thickness of flange
-        QUANTITY      depth;            [9]  Section depth
-        QUANTITY      area;             [10] Section area
-        QUANTITY      plate_thickness;  [11]
-        QUANTITY      tor_const;        [12] Torsional Constant J
-        QUANTITY      rT;               [13] Section radius of gyration
-        QUANTITY      width;            [14] Section width
-        QUANTITY      tw;               [15] Thickness of web
-*/
 
-       elmtno = (int) m->uMatrix.daa[0][0];
-       elmt_attr_no = frame->element[elmtno-1].elmt_attr_no;
-       name = frame->eattr[elmt_attr_no-1].section;
-       sap = lookup(name)->u.sap;
-       section  = MatrixAllocIndirect("Elmt Section", DOUBLE_ARRAY, 16, 1);
+   elmtno       = (int) m->uMatrix.daa[0][0];
+   elmt_attr_no = frame->element[elmtno-1].elmt_attr_no;
+   name         = frame->eattr[elmt_attr_no-1].section;
+   sap          = lookup(name)->u.sap;
+   section      = MatrixAllocIndirect("Elmt Section", DOUBLE_ARRAY, 16, 1);
 
-       section->uMatrix.daa[0][0]  = sap->Ixx.value;
-       section->uMatrix.daa[1][0]  = sap->Iyy.value;
-       section->uMatrix.daa[2][0]  = sap->Izz.value;
-       section->uMatrix.daa[3][0]  = sap->Ixz.value;
-       section->uMatrix.daa[4][0]  = sap->Ixy.value;
-       section->uMatrix.daa[5][0]  = sap->Iyz.value;
-       section->uMatrix.daa[6][0]  = sap->weight.value;
-       section->uMatrix.daa[7][0]  = sap->bf.value;
-       section->uMatrix.daa[8][0]  = sap->tf.value;
-       section->uMatrix.daa[9][0]  = sap->depth.value;
-       section->uMatrix.daa[10][0] = sap->area.value;
-       section->uMatrix.daa[11][0] = sap->plate_thickness.value;
-       section->uMatrix.daa[12][0] = sap->tor_const.value;
-       section->uMatrix.daa[13][0] = sap->rT.value;
-       section->uMatrix.daa[14][0] = sap->width.value;
-       section->uMatrix.daa[15][0] = sap->tw.value;
-       if( CheckUnits() == ON ) {
-          ZeroUnits( &(section->spColUnits[0]) );
-          if( sap->Ixx.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[0]), sap->Ixx.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[0]) );
-          if( sap->Iyy.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[1]), sap->Iyy.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[1]) );
-          if( sap->Izz.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[2]), sap->Izz.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[2]) );
-          if( sap->Ixz.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[3]), sap->Ixz.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[3]) );
-          if( sap->Ixy.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[4]), sap->Ixy.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[4]) );
-          if( sap->Iyz.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[5]), sap->Iyz.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[5]) );
-          if( sap->weight.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[6]), sap->weight.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[6]) );
-          if( sap->bf.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[7]), sap->bf.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[7]) );
-          if( sap->tf.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[8]), sap->tf.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[8]) );
-          if( sap->depth.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[9]), sap->depth.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[9]) );
-          if( sap->area.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[10]), sap->area.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[10]) );
-          if( sap->plate_thickness.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[11]), sap->plate_thickness.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[11]) );
-          if( sap->tor_const.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[12]), sap->tor_const.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[12]) );
-          if( sap->rT.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[13]), sap->rT.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[13]) );
-          if( sap->width.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[14]), sap->width.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[14]) );
-          if( sap->tw.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(section->spRowUnits[15]), sap->tw.dimen );
-          else
-             ZeroUnits( &(section->spRowUnits[15]) );
-       }
+   section->uMatrix.daa[0][0]  = sap->Ixx.value;
+   section->uMatrix.daa[1][0]  = sap->Iyy.value;
+   section->uMatrix.daa[2][0]  = sap->Izz.value;
+   section->uMatrix.daa[3][0]  = sap->Ixz.value;
+   section->uMatrix.daa[4][0]  = sap->Ixy.value;
+   section->uMatrix.daa[5][0]  = sap->Iyz.value;
+   section->uMatrix.daa[6][0]  = sap->weight.value;
+   section->uMatrix.daa[7][0]  = sap->bf.value;
+   section->uMatrix.daa[8][0]  = sap->tf.value;
+   section->uMatrix.daa[9][0]  = sap->depth.value;
+   section->uMatrix.daa[10][0] = sap->area.value;
+   section->uMatrix.daa[11][0] = sap->plate_thickness.value;
+   section->uMatrix.daa[12][0] = sap->tor_const.value;
+   section->uMatrix.daa[13][0] = sap->rT.value;
+   section->uMatrix.daa[14][0] = sap->width.value;
+   section->uMatrix.daa[15][0] = sap->tw.value;
+
+   if( CheckUnits() == ON ) {
+       ZeroUnits( &(section->spColUnits[0]) );
+       if( sap->Ixx.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[0]), sap->Ixx.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[0]) );
+       if( sap->Iyy.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[1]), sap->Iyy.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[1]) );
+       if( sap->Izz.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[2]), sap->Izz.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[2]) );
+       if( sap->Ixz.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[3]), sap->Ixz.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[3]) );
+       if( sap->Ixy.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[4]), sap->Ixy.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[4]) );
+       if( sap->Iyz.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[5]), sap->Iyz.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[5]) );
+       if( sap->weight.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[6]), sap->weight.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[6]) );
+       if( sap->bf.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[7]), sap->bf.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[7]) );
+       if( sap->tf.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[8]), sap->tf.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[8]) );
+       if( sap->depth.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[9]), sap->depth.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[9]) );
+       if( sap->area.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[10]), sap->area.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[10]) );
+       if( sap->plate_thickness.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[11]), sap->plate_thickness.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[11]) );
+       if( sap->tor_const.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[12]), sap->tor_const.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[12]) );
+       if( sap->rT.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[13]), sap->rT.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[13]) );
+       if( sap->width.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[14]), sap->width.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[14]) );
+       if( sap->tw.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(section->spRowUnits[15]), sap->tw.dimen );
+       else
+           ZeroUnits( &(section->spRowUnits[15]) );
+   }
 
 #ifdef DEBUG
        printf("*** Leave Get_Section()\n");
@@ -2022,6 +2249,26 @@ SECTION_ATTR *sap;
 
     return(section);
 }
+
+/* 
+ *  ===================================================================== 
+ *  Get_Material() : Return material properties for a particular element.
+ *
+ *  Input  : Matrix *m        -- elementno.
+ *  Output : Matrix *material -- matrix of section properties.
+ *  ===================================================================== 
+ *  The details are:
+ * 
+ *  QUANTITY               E;    [0] Young's modulus
+ *  QUANTITY               G;    [1] Shear modulus
+ *  QUANTITY              fy;    [2] Yield stress
+ *  QUANTITY              ET;    [3] Tangent Young's Modulus
+ *  double                nu;    [4] Poission's ratio
+ *  QUANTITY         density;    [5] 
+ *  QUANTITY              fu;    [6] Ultimate stress
+ *  QUANTITY  *alpha_thermal;    [7] thermal expansion coefficient
+ *  ===================================================================== 
+ */ 
 
 #ifdef __STDC__
 MATRIX *Get_Material(MATRIX *m)
@@ -2041,76 +2288,68 @@ MATERIAL_ATTR *map;
        printf("*** Enter Get_Material()\n");
 #endif
 
-/*
-        QUANTITY                   E;    [0] Young's modulus
-        QUANTITY                   G;    [1] Shear modulus
-        QUANTITY                  fy;    [2] Yield stress
-        QUANTITY                  ET;    [3] Tangent Young's Modulus
-        double                    nu;    [4] Poission's ratio
-        QUANTITY             density;    [5] 
-        QUANTITY                  fu;    [6] Ultimate stress
-        QUANTITY      *alpha_thermal;    [7] thermal expansion coefficient
-*/
-       elmtno = (int) m->uMatrix.daa[0][0];
-       elmt_attr_no = frame->element[elmtno-1].elmt_attr_no;
-       name = frame->eattr[elmt_attr_no-1].material;
-       map = lookup(name)->u.map;
-       material  = MatrixAllocIndirect("Elmt Material", DOUBLE_ARRAY, 10, 1);
+   elmtno = (int) m->uMatrix.daa[0][0];
+   elmt_attr_no = frame->element[elmtno-1].elmt_attr_no;
+   name = frame->eattr[elmt_attr_no-1].material;
+   map = lookup(name)->u.map;
+   material  = MatrixAllocIndirect("Elmt Material", DOUBLE_ARRAY, 10, 1);
 
-       material->uMatrix.daa[0][0] = map->E.value;
-       material->uMatrix.daa[1][0] = map->G.value;
-       material->uMatrix.daa[2][0] = map->fy.value;
-       material->uMatrix.daa[3][0] = map->ET.value;
-       material->uMatrix.daa[4][0] = map->nu;
-       material->uMatrix.daa[5][0] = map->density.value;
-       material->uMatrix.daa[6][0] = map->fu.value;
-       material->uMatrix.daa[7][0] = map->alpha_thermal[0].value;
-       material->uMatrix.daa[8][0] = map->alpha_thermal[1].value;
-       material->uMatrix.daa[9][0] = map->alpha_thermal[2].value;
-       if( CheckUnits() == ON ) {
-          ZeroUnits( &(material->spColUnits[0]) );
-          if( map->E.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[0]), map->E.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[0]) );
-          if( map->G.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[1]), map->G.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[1]) );
-          if( map->fy.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[2]), map->fy.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[2]) );
-          if( map->ET.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[3]), map->ET.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[3]) );
-          ZeroUnits( &(material->spRowUnits[4]) );
-          if( map->density.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[5]), map->density.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[5]) );
-          if( map->fu.dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[6]), map->fu.dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[6]) );
-          if( map->alpha_thermal[0].dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[7]), map->alpha_thermal[0].dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[7]) );
-          if( map->alpha_thermal[1].dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[8]), map->alpha_thermal[1].dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[8]) );
-          if( map->alpha_thermal[2].dimen != (DIMENSIONS *)NULL )
-             UnitsCopy( &(material->spRowUnits[9]), map->alpha_thermal[2].dimen );
-          else
-             ZeroUnits( &(material->spRowUnits[9]) );
-       }
+   material->uMatrix.daa[0][0] = map->E.value;
+   material->uMatrix.daa[1][0] = map->G.value;
+   material->uMatrix.daa[2][0] = map->fy.value;
+   material->uMatrix.daa[3][0] = map->ET.value;
+   material->uMatrix.daa[4][0] = map->nu;
+   material->uMatrix.daa[5][0] = map->density.value;
+   material->uMatrix.daa[6][0] = map->fu.value;
+   material->uMatrix.daa[7][0] = map->alpha_thermal[0].value;
+   material->uMatrix.daa[8][0] = map->alpha_thermal[1].value;
+   material->uMatrix.daa[9][0] = map->alpha_thermal[2].value;
+
+   if( CheckUnits() == ON ) {
+       ZeroUnits( &(material->spColUnits[0]) );
+       if( map->E.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[0]), map->E.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[0]) );
+       if( map->G.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[1]), map->G.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[1]) );
+       if( map->fy.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[2]), map->fy.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[2]) );
+       if( map->ET.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[3]), map->ET.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[3]) );
+       ZeroUnits( &(material->spRowUnits[4]) );
+       if( map->density.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[5]), map->density.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[5]) );
+       if( map->fu.dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[6]), map->fu.dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[6]) );
+       if( map->alpha_thermal[0].dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[7]), map->alpha_thermal[0].dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[7]) );
+       if( map->alpha_thermal[1].dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[8]), map->alpha_thermal[1].dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[8]) );
+       if( map->alpha_thermal[2].dimen != (DIMENSIONS *)NULL )
+           UnitsCopy( &(material->spRowUnits[9]), map->alpha_thermal[2].dimen );
+       else
+           ZeroUnits( &(material->spRowUnits[9]) );
+   }
 
 #ifdef DEBUG
        printf("*** Leave Get_Material()\n");
 #endif
 
-    return(material);
+   return(material);
 }
+

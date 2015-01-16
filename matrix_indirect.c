@@ -1,14 +1,15 @@
 /*
  *  ============================================================================= 
- *  ALADDIN Version 1.0 :
- *    matrix_indirect.c : Functions for Matrices having INDIRECT storage pattern.
+ *  ALADDIN Version 2.0 :
  *                                                                     
- *  Copyright (C) 1995 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
+ *  matrix_indirect.c : Functions for Matrices having INDIRECT storage pattern.
+ *                                                                     
+ *  Copyright (C) 1995-1997 by Mark Austin, Xiaoguang Chen, and Wane-Jang Lin
  *  Institute for Systems Research,                                           
  *  University of Maryland, College Park, MD 20742                                   
  *                                                                     
  *  This software is provided "as is" without express or implied warranty.
- *  Permission is granted to use this software for any on any computer system
+ *  Permission is granted to use this software on any computer system,
  *  and to redistribute it freely, subject to the following restrictions:
  * 
  *  1. The authors are not responsible for the consequences of use of
@@ -19,24 +20,19 @@
  *     be misrepresented as being the original software.
  *  4. This notice is to remain intact.
  *                                                                    
- *  Written by: Mark Austin                                         December 1995
+ *  Written by: Mark Austin                                              May 1997
  *  ============================================================================= 
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
-#ifdef __STDC__
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#endif
-
+#include "defs.h"
+#include "miscellaneous.h"
 #include "units.h"
 #include "matrix.h"
 #include "vector.h"
-#include "defs.h"
-#include "miscellaneous.h"
 
 /* #define DEBUG */
 /* #define LU_DEBUG */
