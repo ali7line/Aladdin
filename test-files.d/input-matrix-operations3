@@ -1,0 +1,124 @@
+/* ======================================================== */
+/* MATRIX OEPRATION III                                     */
+/*                                                          */
+/* Test basic matrix arithmetic and linear equation solvers */
+/* ======================================================== */
+
+print "\n =========== COPY A MATRIX ===========\n";
+
+X = [1.0 kN, 2.0 Pa, 3 m];
+Y = Copy(X);
+Z = X;
+PrintMatrix(X,Y,Z);
+
+print "\n =========== TRANSPOSE A MATRIX ===========\n";
+
+Y = Trans(X);
+PrintMatrix(X, Y);
+
+print "\n =========== MATRIX ADDITION ===========\n";
+
+/* Initialize */
+X = Diag([4, 1]);
+Y = One([4]);
+X = ColumnUnits(X, [ksi, ft, N, m]);
+Y = ColumnUnits(Y, [psi, in, kN,km]);
+X = RowUnits(X, [psi, in, kN, mm]);
+Y = RowUnits(Y, [ksi, ft, N, mm]);
+
+Z = X + Y;
+U = Y + X;
+PrintMatrix(X, Y, Z, U);
+print "\n =========== MATRIX SUBSTRACTION ===========\n";
+Z = X - Y;
+U = Y - X;
+PrintMatrix(X, Y, Z, U);
+
+
+print "\n =========== MATRIX MULTIPLICATION ===========\n";
+X = [2, 3, 5; 4, 6, 7; 10, 2, 3];
+Z = One([3, 4]);
+Y = One([3, 1]);
+
+print "\n ===== Non-Dimensional Matrix Mulitiplication \n";
+U = X*Z;
+V = X*Y;
+PrintMatrix(X, Y, Z, U, V);
+
+X = ColumnUnits(X, [psi*in, psi*in, lbf]);
+X = RowUnits(X, [in], [3]);
+
+Y = RowUnits(Y, [ft, ft, rad]);
+
+print "\n ===== Dimensional Matrix Mulitiplication \n";
+U = X*Y;
+PrintMatrix(X, Y, U);
+
+print "\n =========== MATRIX INVERSE ===========\n";
+
+print "\n ===== Non-Dimensional Matrix Inverse\n";
+
+X = [3,  4, 5, 7,  9,  10;
+     1,  6, 7, 9, 20, 100;
+     11,26,47, 9,  2,  13;
+     12, 6,87, 1,  3,  33;
+     11, 0, 1, 6,  31,  5;
+     81, 71,2, 2,   1,  54];
+Y = Inverse(X);
+
+IL = X*Y;    /* left Identity Matrix  */
+IR = Y*X;    /* Right Identity Matrix */
+PrintMatrix(X, Y, IL, IR);
+
+X = ColumnUnits(X, [N/m, N/m, N, N/m, N/m, N]);
+X = RowUnits(X, [m], [3]);
+X = RowUnits(X, [m], [6]);
+
+Y = Inverse(X);
+IL = X*Y;    /* left Identity Matrix  */
+IR = Y*X;    /* Right Identity Matrix */
+PrintMatrix(X, Y, IL, IR);
+
+print "\n====== DECOMPOSE MATRIX INTO [L][U] TRIANGLES =======\n";
+
+Y = Decompose(X);
+PrintMatrix(X, Y);
+
+print "\n====== LINEAR MATRIX EQUATION SOLVER [A]{x} = {b} =======\n";
+
+A = [3,  4, 5, 7,  9,  10;
+     1,  6, 7, 9, 20, 100;
+     11,26,47, 9,  2,  13;
+     12, 6,87, 1,  3,  33;
+     11, 0, 1, 6,  31,  5;
+     81, 71,2, 2,   1,  54];
+A = ColumnUnits(A, [N/m, N/m, N, N/m, N/m, N]);
+A = RowUnits(A, [m], [3]);
+A = RowUnits(A, [m], [6]);
+
+b = [20 N; 100 N;  10 N*m;
+      3 N;   2 N; 200 N*m];
+PrintMatrix(A, b);
+
+print "\n ---  Solve By Matrix Inverse \n";
+Y = Inverse(A);
+x = Y*b;
+print "\n ---  Check Results \n";
+R = A*x -b;
+PrintMatrix(x, R);
+
+print "\n";
+print "\n ---  Solve By Matrix Solver \n";
+x = Solve(A, b);
+print "\n ---  Check Results \n";
+R = A*x -b;
+PrintMatrix(x, R);
+
+print "\n";
+print "\n ---  Solve By Matrix LU Decomposition and Backsubstitution \n";
+LU = Decompose(A);
+x  = Substitution(LU, b);
+print "\n ---  Check Results \n";
+R = A*x -b;
+PrintMatrix(x, R);
+
